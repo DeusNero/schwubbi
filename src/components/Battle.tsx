@@ -101,6 +101,8 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
 
   const getChosenStyle = (id: string): React.CSSProperties => {
     if (!chosenId) return {}
+    const belongsToMatchup = chosenId === matchup.left.id || chosenId === matchup.right.id
+    if (!belongsToMatchup) return {}
     if (chosenId === id) {
       return {
         border: '3px solid var(--gold)',
