@@ -10,6 +10,7 @@
 - **GitHub Actions** — Automation that runs when you push code. Your deploy.yml file tells it to build and publish your app automatically.
 
 ## UX/UI Terms
+- **Janky / Stuttering** — When an animation doesn't flow smoothly — it stops and starts instead of moving in one continuous motion. In German: "stockend."
 - **Favicon** — The tiny icon in the browser tab next to your page title.
 - **Manifest** — A settings file that tells the phone what your app is called, what icon to use, and how to display it when installed.
 - **Viewport** — The visible area of the screen. When we say "images must stay in the viewport," we mean they can't go off-screen.
