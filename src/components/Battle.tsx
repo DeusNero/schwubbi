@@ -136,7 +136,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
   const animationTransition = {
     duration: ANIMATION_DURATION,
     times: [0, 0.15, 0.35, 0.5, 0.65, 0.85, 1],
-    ease: ['easeIn', 'easeOut', 'easeInOut', 'easeInOut', 'easeInOut', 'easeOut'] as any,
+    ease: ['easeIn', 'easeOut', 'easeIn', 'linear', 'linear', 'easeOut'] as any,
   }
 
   const frozenLeft = { x: -spreadX, y: 0 }
