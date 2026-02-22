@@ -7,11 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
-      workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
-      },
+      selfDestroying: true,
       includeAssets: ['icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'Schwubbi',
