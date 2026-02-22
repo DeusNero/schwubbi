@@ -8,12 +8,14 @@ interface BattleProps {
   matchup: Matchup
   onResult: (winnerId: string) => void
   roundLabel: string
+  round: number
+  totalRounds: number
 }
 
 const ANIMATION_DURATION = 5
 const TIMEOUT_EXTRA = 3
 
-export default function Battle({ matchup, onResult, roundLabel }: BattleProps) {
+export default function Battle({ matchup, onResult, roundLabel, round, totalRounds }: BattleProps) {
   const [phase, setPhase] = useState<'animate' | 'timeout' | 'chosen'>('animate')
   const [chosenId, setChosenId] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -66,9 +68,14 @@ export default function Battle({ matchup, onResult, roundLabel }: BattleProps) {
   const leftUrl = getThumbUrl(matchup.left.id)
   const rightUrl = getThumbUrl(matchup.right.id)
 
+  const progress = totalRounds > 1 ? (round - 1) / (totalRounds - 1) : 1
+  const scaleFactor = 0.7 + 0.3 * progress
+  const baseSize = Math.min(window.innerWidth * 0.4, 160)
+  const imgSize = baseSize * scaleFactor
+
   const imageStyle: React.CSSProperties = {
-    width: 'min(40vw, 160px)',
-    height: 'min(40vw, 160px)',
+    width: imgSize,
+    height: imgSize,
     borderRadius: '50%',
     objectFit: 'cover',
     border: '3px solid rgba(255,255,255,0.2)',
@@ -91,16 +98,17 @@ export default function Battle({ matchup, onResult, roundLabel }: BattleProps) {
 
   const vw = typeof window !== 'undefined' ? window.innerWidth : 400
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800
-  const spreadX = Math.min(vw * 0.35, 160)
+  const maxSpreadX = (vw / 2) - (imgSize / 2) - 16
+  const spreadX = Math.min(vw * 0.25, maxSpreadX)
 
   const leftKeyframes = {
-    x: [0, -10, -spreadX, -spreadX * 1.3],
-    y: [0, -vh * 0.35, -vh * 0.45, vh * 0.15],
+    x: [0, -10, -spreadX, -spreadX],
+    y: [0, -vh * 0.2, -vh * 0.25, 0],
   }
 
   const rightKeyframes = {
-    x: [0, 10, spreadX, spreadX * 1.3],
-    y: [0, -vh * 0.35, -vh * 0.45, vh * 0.15],
+    x: [0, 10, spreadX, spreadX],
+    y: [0, -vh * 0.2, -vh * 0.25, 0],
   }
 
   const animationTransition = {
@@ -111,12 +119,12 @@ export default function Battle({ matchup, onResult, roundLabel }: BattleProps) {
 
   const frozenLeft = {
     x: -spreadX,
-    y: -vh * 0.2,
+    y: 0,
   }
 
   const frozenRight = {
     x: spreadX,
-    y: -vh * 0.2,
+    y: 0,
   }
 
   return (
@@ -175,8 +183,8 @@ export default function Battle({ matchup, onResult, roundLabel }: BattleProps) {
               ? frozenLeft
               : phase === 'chosen'
                 ? chosenId === matchup.left.id
-                  ? { x: 0, y: -vh * 0.15, scale: 1.15 }
-                  : { x: -vw, y: 0, opacity: 0 }
+                  ? { x: 0, y: -vh * 0.1, scale: 1.15 }
+                  : { x: -vw * 0.5, y: 0, opacity: 0 }
                 : leftKeyframes
           }
           transition={
@@ -198,8 +206,8 @@ export default function Battle({ matchup, onResult, roundLabel }: BattleProps) {
               ? frozenRight
               : phase === 'chosen'
                 ? chosenId === matchup.right.id
-                  ? { x: 0, y: -vh * 0.15, scale: 1.15 }
-                  : { x: vw, y: 0, opacity: 0 }
+                  ? { x: 0, y: -vh * 0.1, scale: 1.15 }
+                  : { x: vw * 0.5, y: 0, opacity: 0 }
                 : rightKeyframes
           }
           transition={

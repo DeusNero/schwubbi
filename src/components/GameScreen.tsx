@@ -160,6 +160,8 @@ export default function GameScreen() {
       matchup={currentMatchup}
       onResult={handleResult}
       roundLabel={`Round ${round}/${totalRounds} · Match ${matchInRound}/${matchesInRound}`}
+      round={round}
+      totalRounds={totalRounds}
     />
   )
 }
