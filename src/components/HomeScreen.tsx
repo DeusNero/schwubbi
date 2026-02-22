@@ -121,6 +121,10 @@ export default function HomeScreen() {
         style={{ display: 'none' }}
       />
 
+      <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>
+        v1.0.0
+      </div>
+
       {uploading && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
