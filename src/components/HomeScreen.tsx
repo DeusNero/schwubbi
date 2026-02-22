@@ -122,7 +122,7 @@ export default function HomeScreen() {
       />
 
       <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>
-        v1.0.0
+        v1.1.0
       </div>
 
       {uploading && (
