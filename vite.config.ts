@@ -3,15 +3,15 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  base: '/best-cat-img/',
+  base: '/schwubbi/',
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['cat-icon.svg'],
       manifest: {
-        name: 'Cat Tournament',
-        short_name: 'CatTourney',
+        name: 'Schwubbi',
+        short_name: 'Schwubbi',
         description: 'Find the best cat photo through epic head-to-head battles!',
         theme_color: '#1a1a2e',
         background_color: '#1a1a2e',
