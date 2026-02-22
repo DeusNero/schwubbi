@@ -6,7 +6,7 @@ import { playLaunch, playTap, playElimination } from '../lib/sounds'
 
 interface BattleProps {
   matchup: Matchup
-  onResult: (winnerId: string) => void
+  onResult: (winnerId: string | null) => void
   roundLabel: string
   round: number
   totalRounds: number
@@ -42,8 +42,10 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
     timerRef.current = setTimeout(() => {
       setPhase('timeout')
       timeoutTimerRef.current = setTimeout(() => {
-        const randomWinner = Math.random() > 0.5 ? matchup.left.id : matchup.right.id
-        handleChoice(randomWinner, true)
+        if (countdownRef.current) clearInterval(countdownRef.current)
+        setPhase('chosen')
+        setChosenId(null)
+        setTimeout(() => onResult(null), 800)
       }, TIMEOUT_EXTRA * 1000)
     }, ANIMATION_DURATION * 1000)
 
@@ -111,8 +113,9 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
   const vw = typeof window !== 'undefined' ? window.innerWidth : 400
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800
 
-  const maxSpreadX = (vw / 2) - (imgSize / 2) - 12
-  const spreadX = Math.min(vw * 0.3, maxSpreadX)
+  const flexOffset = imgSize / 2 + 8
+  const maxSpreadX = (vw / 2) - flexOffset - imgSize / 2 - 12
+  const spreadX = Math.min(vw * 0.25, Math.max(maxSpreadX, 20))
 
   const topSafe = 140 + imgSize / 2
   const restFromTop = vh * 0.88
@@ -138,7 +141,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
   const frozenRight = { x: spreadX, y: 0 }
 
   return (
-    <div className="screen" style={{ overflow: 'hidden' }}>
+    <div className="screen">
       <div
         style={{
           position: 'absolute',

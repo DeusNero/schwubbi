@@ -7,7 +7,7 @@ import { getAllElos, getElo } from '../lib/storage'
 import type { EloEntry } from '../lib/storage'
 import { selectTournamentImages, generateBracket } from '../engine/tournament'
 import type { Matchup } from '../engine/tournament'
-import { updateElo } from '../engine/elo'
+import { updateElo, updateEloBothLose } from '../engine/elo'
 import Battle from './Battle'
 import Finale from './Finale'
 
@@ -70,8 +70,34 @@ export default function GameScreen() {
   }, [startTournament])
 
   const handleResult = useCallback(
-    async (winId: string) => {
+    async (winId: string | null) => {
       const currentMatchup = matchups[currentIdx]
+
+      if (!winId) {
+        await updateEloBothLose(currentMatchup.left.id, currentMatchup.right.id)
+
+        if (currentIdx < matchups.length - 1) {
+          setCurrentIdx((i) => i + 1)
+          setMatchInRound((m) => m + 1)
+          return
+        }
+
+        const newWinners = roundWinners
+        if (newWinners.length === 0) {
+          startTournament(allImages)
+          return
+        }
+
+        const nextBracket = generateBracket(newWinners)
+        setMatchups(nextBracket)
+        setCurrentIdx(0)
+        setRound((r) => r + 1)
+        setMatchInRound(1)
+        setMatchesInRound(nextBracket.length)
+        setRoundWinners([])
+        return
+      }
+
       const loserId =
         currentMatchup.left.id === winId
           ? currentMatchup.right.id
