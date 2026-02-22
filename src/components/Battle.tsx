@@ -110,35 +110,32 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
 
   const vw = typeof window !== 'undefined' ? window.innerWidth : 400
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800
-  const maxSpreadX = (vw / 2) - (imgSize / 2) - 16
-  const spreadX = Math.min(vw * 0.28, maxSpreadX)
-  const riseHeight = -vh * 0.35
+
+  const maxSpreadX = (vw / 2) - (imgSize / 2) - 12
+  const spreadX = Math.min(vw * 0.3, maxSpreadX)
+
+  const topSafe = 140 + imgSize / 2
+  const restFromTop = vh * 0.88
+  const riseY = -(restFromTop - topSafe)
 
   const leftKeyframes = {
-    x: [0, 0, -spreadX * 0.6, -spreadX],
-    y: [0, riseHeight, riseHeight * 0.7, 0],
+    x: [0, 0, 0, -spreadX * 0.15, -spreadX * 0.5, -spreadX * 0.85, -spreadX],
+    y: [0, riseY * 0.5, riseY, riseY * 0.85, riseY * 0.5, riseY * 0.15, 0],
   }
 
   const rightKeyframes = {
-    x: [0, 0, spreadX * 0.6, spreadX],
-    y: [0, riseHeight, riseHeight * 0.7, 0],
+    x: [0, 0, 0, spreadX * 0.15, spreadX * 0.5, spreadX * 0.85, spreadX],
+    y: [0, riseY * 0.5, riseY, riseY * 0.85, riseY * 0.5, riseY * 0.15, 0],
   }
 
   const animationTransition = {
     duration: ANIMATION_DURATION,
-    times: [0, 0.4, 0.7, 1],
-    ease: 'easeInOut' as const,
+    times: [0, 0.15, 0.35, 0.5, 0.65, 0.85, 1],
+    ease: ['easeIn', 'easeOut', 'easeInOut', 'easeInOut', 'easeInOut', 'easeOut'] as const,
   }
 
-  const frozenLeft = {
-    x: -spreadX,
-    y: 0,
-  }
-
-  const frozenRight = {
-    x: spreadX,
-    y: 0,
-  }
+  const frozenLeft = { x: -spreadX, y: 0 }
+  const frozenRight = { x: spreadX, y: 0 }
 
   return (
     <div className="screen" style={{ overflow: 'hidden' }}>
@@ -211,7 +208,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
       <div
         style={{
           position: 'absolute',
-          bottom: '25%',
+          bottom: '12%',
           display: 'flex',
           gap: 16,
         }}
@@ -226,8 +223,8 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
               ? frozenLeft
               : phase === 'chosen'
                 ? chosenId === matchup.left.id
-                  ? { x: 0, y: -vh * 0.1, scale: 1.15 }
-                  : { x: -vw * 0.5, y: 0, opacity: 0 }
+                  ? { x: 0, y: riseY * 0.3, scale: 1.15 }
+                  : { opacity: 0, scale: 0.5 }
                 : leftKeyframes
           }
           transition={
@@ -249,8 +246,8 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
               ? frozenRight
               : phase === 'chosen'
                 ? chosenId === matchup.right.id
-                  ? { x: 0, y: -vh * 0.1, scale: 1.15 }
-                  : { x: vw * 0.5, y: 0, opacity: 0 }
+                  ? { x: 0, y: riseY * 0.3, scale: 1.15 }
+                  : { opacity: 0, scale: 0.5 }
                 : rightKeyframes
           }
           transition={
