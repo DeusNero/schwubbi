@@ -64,7 +64,11 @@ export default function HomeScreen() {
         transition={{ type: 'spring', damping: 15 }}
         style={{ textAlign: 'center' }}
       >
-        <div style={{ fontSize: 64, marginBottom: 8 }}>🐱</div>
+        <img
+          src={`${import.meta.env.BASE_URL}schwubbi-hero.png`}
+          alt="Schwubbi"
+          style={{ width: 96, height: 96, borderRadius: '50%', objectFit: 'cover', marginBottom: 8 }}
+        />
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>
           Cat Tournament
         </h1>
