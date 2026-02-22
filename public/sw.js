@@ -1,4 +1,4 @@
-const CACHE_NAME = 'schwubbi-v5';
+const CACHE_NAME = 'schwubbi-v6';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE_NAME));
@@ -8,7 +8,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      Promise.all(keys.filter(k => k.startsWith('schwubbi-') && k !== CACHE_NAME).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
