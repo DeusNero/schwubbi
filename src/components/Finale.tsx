@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { getFullUrl } from '../lib/supabase'
@@ -9,6 +9,7 @@ interface FinaleProps {
   winnerId: string
   eloEntry: EloEntry | null
   totalImages: number
+  rank: number
   onPlayAgain: () => void
   onGoHome: () => void
 }
@@ -17,9 +18,11 @@ export default function Finale({
   winnerId,
   eloEntry,
   totalImages,
+  rank,
   onPlayAgain,
   onGoHome,
 }: FinaleProps) {
+  const [showFullImage, setShowFullImage] = useState(false)
   const confettiFired = useRef(false)
 
   useEffect(() => {
@@ -62,6 +65,7 @@ export default function Finale({
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', damping: 15, delay: 0.1 }}
+        onClick={() => setShowFullImage(true)}
         style={{
           width: 'min(70vw, 280px)',
           height: 'min(70vw, 280px)',
@@ -69,8 +73,18 @@ export default function Finale({
           objectFit: 'cover',
           border: '4px solid var(--gold)',
           boxShadow: '0 0 40px rgba(255, 215, 0, 0.4), 0 8px 32px rgba(0,0,0,0.5)',
+          cursor: 'pointer',
         }}
       />
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        style={{ fontSize: 12, color: 'var(--text-dim)' }}
+      >
+        Tap photo to view full size
+      </motion.div>
 
       {eloEntry && (
         <motion.div
@@ -85,11 +99,33 @@ export default function Finale({
             border: '1px solid rgba(255,255,255,0.1)',
           }}
         >
-          <div style={{ fontSize: 24, fontWeight: 700 }}>ELO {eloEntry.elo}</div>
-          <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>
-            {eloEntry.wins}W / {eloEntry.losses}L · Ranked among {totalImages} photos
+          <div style={{ fontSize: 24, fontWeight: 700 }}>#{rank} of {totalImages}</div>
+          <div style={{ fontSize: 14, color: 'var(--text-dim)', marginTop: 4 }}>
+            {Math.round((eloEntry.wins / (eloEntry.wins + eloEntry.losses)) * 100)}% win rate · {eloEntry.wins}W / {eloEntry.losses}L
           </div>
         </motion.div>
+      )}
+
+      {showFullImage && (
+        <div
+          onClick={() => setShowFullImage(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            background: 'rgba(0,0,0,0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          <img
+            src={fullUrl}
+            alt="Winner full size"
+            style={{ maxWidth: '95vw', maxHeight: '95vh', objectFit: 'contain', borderRadius: 8 }}
+          />
+        </div>
       )}
 
       <motion.div

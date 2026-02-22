@@ -18,16 +18,26 @@ const TIMEOUT_EXTRA = 3
 export default function Battle({ matchup, onResult, roundLabel, round, totalRounds }: BattleProps) {
   const [phase, setPhase] = useState<'animate' | 'timeout' | 'chosen'>('animate')
   const [chosenId, setChosenId] = useState<string | null>(null)
+  const [timeLeft, setTimeLeft] = useState(ANIMATION_DURATION + TIMEOUT_EXTRA)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const matchupIdRef = useRef(`${matchup.left.id}-${matchup.right.id}`)
 
   useEffect(() => {
     matchupIdRef.current = `${matchup.left.id}-${matchup.right.id}`
     setPhase('animate')
     setChosenId(null)
+    setTimeLeft(ANIMATION_DURATION + TIMEOUT_EXTRA)
 
     playLaunch()
+
+    countdownRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) return 0
+        return prev - 1
+      })
+    }, 1000)
 
     timerRef.current = setTimeout(() => {
       setPhase('timeout')
@@ -40,6 +50,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
       if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current)
+      if (countdownRef.current) clearInterval(countdownRef.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchup.left.id, matchup.right.id])
@@ -49,6 +60,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
       if (phase === 'chosen') return
       if (timerRef.current) clearTimeout(timerRef.current)
       if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current)
+      if (countdownRef.current) clearInterval(countdownRef.current)
 
       setChosenId(id)
       setPhase('chosen')
@@ -69,7 +81,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
   const rightUrl = getThumbUrl(matchup.right.id)
 
   const progress = totalRounds > 1 ? (round - 1) / (totalRounds - 1) : 1
-  const scaleFactor = 0.7 + 0.3 * progress
+  const scaleFactor = 0.85 + 0.15 * progress
   const baseSize = Math.min(window.innerWidth * 0.4, 160)
   const imgSize = baseSize * scaleFactor
 
@@ -99,21 +111,22 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
   const vw = typeof window !== 'undefined' ? window.innerWidth : 400
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800
   const maxSpreadX = (vw / 2) - (imgSize / 2) - 16
-  const spreadX = Math.min(vw * 0.25, maxSpreadX)
+  const spreadX = Math.min(vw * 0.28, maxSpreadX)
+  const riseHeight = -vh * 0.35
 
   const leftKeyframes = {
-    x: [0, -10, -spreadX, -spreadX],
-    y: [0, -vh * 0.2, -vh * 0.25, 0],
+    x: [0, 0, -spreadX * 0.6, -spreadX],
+    y: [0, riseHeight, riseHeight * 0.7, 0],
   }
 
   const rightKeyframes = {
-    x: [0, 10, spreadX, spreadX],
-    y: [0, -vh * 0.2, -vh * 0.25, 0],
+    x: [0, 0, spreadX * 0.6, spreadX],
+    y: [0, riseHeight, riseHeight * 0.7, 0],
   }
 
   const animationTransition = {
     duration: ANIMATION_DURATION,
-    times: [0, 0.3, 0.6, 1],
+    times: [0, 0.4, 0.7, 1],
     ease: 'easeInOut' as const,
   }
 
@@ -143,27 +156,57 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
         {roundLabel}
       </div>
 
-      <AnimatePresence mode="wait">
-        {phase === 'timeout' && !chosenId && (
-          <motion.div
-            key="choose-prompt"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            style={{
-              position: 'absolute',
-              top: '15%',
-              zIndex: 10,
-              fontSize: 24,
-              fontWeight: 800,
-              color: 'var(--accent)',
-              textShadow: '0 0 20px var(--accent-glow)',
-            }}
-          >
-            CHOOSE!
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {phase !== 'chosen' && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 80,
+            zIndex: 10,
+            textAlign: 'center',
+          }}
+        >
+          <div style={{
+            fontSize: 32,
+            fontWeight: 800,
+            fontVariantNumeric: 'tabular-nums',
+            color: timeLeft <= TIMEOUT_EXTRA ? 'var(--accent)' : 'rgba(255,255,255,0.3)',
+            textShadow: timeLeft <= TIMEOUT_EXTRA ? '0 0 20px var(--accent-glow)' : 'none',
+          }}>
+            {timeLeft}
+          </div>
+          <AnimatePresence mode="wait">
+            {phase === 'animate' && !chosenId && (
+              <motion.div
+                key="choose-prompt"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{ fontSize: 18, fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}
+              >
+                CHOOSE!
+              </motion.div>
+            )}
+            {phase === 'timeout' && !chosenId && (
+              <motion.div
+                key="lastchance-prompt"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: [1, 1.1, 1], opacity: 1 }}
+                transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 0.5 }}
+                exit={{ scale: 0, opacity: 0 }}
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: 'var(--accent)',
+                  textShadow: '0 0 20px var(--accent-glow)',
+                  marginTop: 4,
+                }}
+              >
+                LAST CHANCE!
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       <div
         style={{

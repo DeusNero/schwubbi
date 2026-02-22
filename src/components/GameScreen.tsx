@@ -25,6 +25,7 @@ export default function GameScreen() {
   const [matchesInRound, setMatchesInRound] = useState(0)
   const [winnerId, setWinnerId] = useState<string | null>(null)
   const [winnerElo, setWinnerElo] = useState<EloEntry | null>(null)
+  const [winnerRank, setWinnerRank] = useState(0)
   const [totalImages, setTotalImages] = useState(0)
   const [allImages, setAllImages] = useState<ImageRecord[]>([])
 
@@ -93,8 +94,12 @@ export default function GameScreen() {
 
       if (newWinners.length === 1) {
         const elo = await getElo(newWinners[0].id)
+        const allElos = await getAllElos()
+        const sorted = allElos.filter(e => e.matchups > 0).sort((a, b) => b.elo - a.elo)
+        const rank = sorted.findIndex(e => e.imageId === newWinners[0].id) + 1
         setWinnerId(newWinners[0].id)
         setWinnerElo(elo)
+        setWinnerRank(rank || 1)
         setState('finale')
         return
       }
@@ -146,6 +151,7 @@ export default function GameScreen() {
         winnerId={winnerId}
         eloEntry={winnerElo}
         totalImages={totalImages}
+        rank={winnerRank}
         onPlayAgain={() => startTournament(allImages)}
         onGoHome={() => navigate('/')}
       />

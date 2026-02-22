@@ -12,6 +12,7 @@ export default function Leaderboard() {
   const navigate = useNavigate()
   const [topEntries, setTopEntries] = useState<EloEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [viewingImage, setViewingImage] = useState<string | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -73,6 +74,7 @@ export default function Leaderboard() {
               initial={{ x: -40, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: i * 0.1 }}
+              onClick={() => setViewingImage(entry.imageId)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -82,6 +84,7 @@ export default function Leaderboard() {
                 borderRadius: 'var(--radius)',
                 border: i === 0 ? '1px solid var(--gold)' : '1px solid rgba(255,255,255,0.06)',
                 boxShadow: i === 0 ? '0 0 20px rgba(255, 215, 0, 0.15)' : undefined,
+                cursor: 'pointer',
               }}
             >
               <div
@@ -109,13 +112,37 @@ export default function Leaderboard() {
               />
 
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>ELO {entry.elo}</div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>
+                  {Math.round((entry.wins / (entry.wins + entry.losses)) * 100)}% win rate
+                </div>
                 <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
                   {entry.wins}W / {entry.losses}L · {entry.matchups} games
                 </div>
               </div>
             </motion.div>
           ))}
+        </div>
+      )}
+
+      {viewingImage && (
+        <div
+          onClick={() => setViewingImage(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            background: 'rgba(0,0,0,0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          <img
+            src={getFullUrl(viewingImage)}
+            alt="Full size"
+            style={{ maxWidth: '95vw', maxHeight: '95vh', objectFit: 'contain', borderRadius: 8 }}
+          />
         </div>
       )}
     </div>
