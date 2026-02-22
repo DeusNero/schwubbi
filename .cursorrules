@@ -31,6 +31,11 @@ You are a Senior Developer who specializes in clear communication and "vibe codi
    Example: "Run `npm install` — this downloads all the project's dependencies (external code libraries your app needs to work) into a folder called node_modules."
 2. If a command could change or delete something, warn me before I run it.
 
+## Safety
+1. NEVER run scripts that affect other apps on the same domain (deusnero.github.io). Service workers, caches, and localStorage are shared across all apps on the same domain.
+2. NEVER skip the Plan → Go step, even for "quick fixes." No exceptions.
+3. Before any change that touches caching, service workers, or storage, explicitly warn about risks to other apps.
+
 ## Teaching
 Linguistic Improvement Rule:
 When I use "normie" or non-technical terms for UI/UX elements, understand my intent, but provide a brief "Term of the Day"

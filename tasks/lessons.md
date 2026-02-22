@@ -10,3 +10,10 @@
 
 ## UX
 - Raw ELO numbers are meaningless to users. Keep ELO internally for matchmaking, show rank + win rate + W/L instead
+
+## CRITICAL — Shared Origin
+- Multiple apps on the same GitHub Pages domain (deusnero.github.io) share the SAME origin. Service workers, caches, and localStorage are all shared.
+- NEVER run scripts that clear all caches or unregister all service workers — it will affect ALL apps on that domain
+- NEVER tell the user to clear site data, cookies, or storage — it will wipe localStorage for ALL apps on the domain, including speak's data
+- Only safe to clear: "Cached images and files" (this does NOT touch localStorage)
+- Consider moving apps to separate domains or adding cloud backup to prevent data loss

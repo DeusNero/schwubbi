@@ -10,9 +10,13 @@
   const status = document.getElementById('status');
   try {
     const regs = await navigator.serviceWorker.getRegistrations();
-    for (const r of regs) await r.unregister();
+    for (const r of regs) {
+      if (r.scope.includes('/schwubbi')) await r.unregister();
+    }
     const keys = await caches.keys();
-    for (const k of keys) await caches.delete(k);
+    for (const k of keys) {
+      if (k.includes('schwubbi') || k.includes('workbox') || k.includes('precache')) await caches.delete(k);
+    }
     status.textContent = 'Done! Redirecting...';
   } catch(e) {
     status.textContent = 'Cleared! Redirecting...';
