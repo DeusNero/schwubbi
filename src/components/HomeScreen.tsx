@@ -7,6 +7,7 @@ import {
   hashBlobSha256,
   hasImageWithContentHash,
   backfillMissingContentHashes,
+  fetchAllImages,
 } from '../lib/supabase'
 import imageCompression from 'browser-image-compression'
 import { LeaderboardSketchIcon } from './icons/SketchIcons'
@@ -59,6 +60,7 @@ export default function HomeScreen() {
   const [uploadProgress, setUploadProgress] = useState('')
   const [showPaw, setShowPaw] = useState(false)
   const [celebrateUpload, setCelebrateUpload] = useState(false)
+  const [totalPhotos, setTotalPhotos] = useState(0)
   const [heroOptions, setHeroOptions] = useState<HeroOption[]>([{ src: defaultHeroSrc, rank: null }])
   const [heroIdx, setHeroIdx] = useState(0)
   const buildDate = new Date(import.meta.env.VITE_BUILD_TIME ?? '')
@@ -126,6 +128,33 @@ export default function HomeScreen() {
       document.removeEventListener('visibilitychange', refreshOnVisible)
     }
   }, [defaultHeroSrc])
+
+  useEffect(() => {
+    let isMounted = true
+    const loadTotalPhotos = async () => {
+      try {
+        const images = await fetchAllImages()
+        if (!isMounted) return
+        setTotalPhotos(images.length)
+      } catch (err) {
+        console.warn('Failed to load total photo count', err)
+      }
+    }
+
+    void loadTotalPhotos()
+    const refreshOnVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void loadTotalPhotos()
+      }
+    }
+    window.addEventListener('focus', refreshOnVisible)
+    document.addEventListener('visibilitychange', refreshOnVisible)
+    return () => {
+      isMounted = false
+      window.removeEventListener('focus', refreshOnVisible)
+      document.removeEventListener('visibilitychange', refreshOnVisible)
+    }
+  }, [])
 
   const showPreviousHero = useCallback(() => {
     if (heroOptions.length <= 1) return
@@ -562,8 +591,13 @@ export default function HomeScreen() {
             +
           </span>
           {!(uploading || uploadProgress) ? (
-            <span style={{ fontSize: 13, textAlign: 'left' }}>
-              Photo Here
+            <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+              <span style={{ fontSize: 13, textAlign: 'left' }}>
+                Photo Here
+              </span>
+              <span style={{ fontSize: 10, color: 'var(--text-dim)', textAlign: 'left' }}>
+                (Total fotos: {totalPhotos})
+              </span>
             </span>
           ) : (
             <span style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'left' }}>
