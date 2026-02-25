@@ -29,6 +29,23 @@ interface UploadBatchMeta {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+const getUploadErrorHint = (err: unknown): string => {
+  const message = String((err as { message?: string })?.message ?? '').toLowerCase()
+  const code = String((err as { code?: string | number })?.code ?? '')
+  const statusCode = Number((err as { statusCode?: number })?.statusCode ?? NaN)
+
+  if (statusCode === 429 || code === '429' || message.includes('too many requests')) {
+    return 'rate limited'
+  }
+  if (message.includes('failed to fetch') || message.includes('network') || message.includes('timeout')) {
+    return 'network issue'
+  }
+  if (message.includes('already exists') || code === '409') {
+    return 'storage conflict'
+  }
+  return 'temporary upload error'
+}
+
 export function UploadManagerProvider({ children }: { children: React.ReactNode }) {
   const uploadQueueRef = useRef<UploadQueueItem[]>([])
   const processingQueueRef = useRef(false)
@@ -56,7 +73,6 @@ export function UploadManagerProvider({ children }: { children: React.ReactNode 
   }, [])
 
   const uploadWithRetry = useCallback(async (
-    id: string,
     thumbBlob: Blob,
     fullBlob: Blob,
     filename: string,
@@ -67,7 +83,8 @@ export function UploadManagerProvider({ children }: { children: React.ReactNode 
     const maxAttempts = isLargeBatch ? 4 : 2
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        return await uploadImage(id, thumbBlob, fullBlob, filename, contentHash)
+        const uploadId = crypto.randomUUID()
+        return await uploadImage(uploadId, thumbBlob, fullBlob, filename, contentHash)
       } catch (err) {
         lastError = err
         if (attempt === maxAttempts) break
@@ -146,8 +163,7 @@ export function UploadManagerProvider({ children }: { children: React.ReactNode 
             continue
           }
 
-          const id = crypto.randomUUID()
-          const result = await uploadWithRetry(id, thumbBlob, fullBlob, file.name, contentHash, isLargeBatch)
+          const result = await uploadWithRetry(thumbBlob, fullBlob, file.name, contentHash, isLargeBatch)
 
           if (result.status === 'duplicate') {
             skipped++
@@ -172,7 +188,8 @@ export function UploadManagerProvider({ children }: { children: React.ReactNode 
           setLastUploadEvent(`Failed: ${file.name}`)
           if (batch) batch.failed++
           console.error('Upload failed for', file.name, err)
-          setUploadProgress(`Failed ${failed} · ${uploadQueueRef.current.length} queued (retrying with backoff)`)
+          const errorHint = getUploadErrorHint(err)
+          setUploadProgress(`Failed ${failed} · ${uploadQueueRef.current.length} queued (${errorHint})`)
           await sleep(isLargeBatch && consecutiveFailures >= 3 ? 3600 : 1200)
         } finally {
           if (batch) {

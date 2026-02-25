@@ -65,6 +65,9 @@ export async function uploadImage(
   if (!hasSupabaseConfig) {
     throw new Error('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
   }
+  const thumbPath = `${id}.webp`
+  const fullPath = `${id}.webp`
+
   const [thumbResult, fullResult] = await Promise.all([
     supabase.storage.from('thumbs').upload(`${id}.webp`, thumbBlob, {
       contentType: 'image/webp',
@@ -76,8 +79,20 @@ export async function uploadImage(
     }),
   ])
 
-  if (thumbResult.error) throw thumbResult.error
-  if (fullResult.error) throw fullResult.error
+  if (thumbResult.error || fullResult.error) {
+    const uploadedPaths = []
+    if (!thumbResult.error) uploadedPaths.push(thumbPath)
+    if (!fullResult.error) uploadedPaths.push(fullPath)
+
+    if (uploadedPaths.length > 0) {
+      await Promise.allSettled([
+        supabase.storage.from('thumbs').remove([thumbPath]),
+        supabase.storage.from('full').remove([fullPath]),
+      ])
+    }
+
+    throw thumbResult.error ?? fullResult.error
+  }
 
   const { error } = await supabase
     .from('images')
@@ -89,12 +104,16 @@ export async function uploadImage(
 
   if (error.code === '23505') {
     await Promise.allSettled([
-      supabase.storage.from('thumbs').remove([`${id}.webp`]),
-      supabase.storage.from('full').remove([`${id}.webp`]),
+      supabase.storage.from('thumbs').remove([thumbPath]),
+      supabase.storage.from('full').remove([fullPath]),
     ])
     return { status: 'duplicate' }
   }
 
+  await Promise.allSettled([
+    supabase.storage.from('thumbs').remove([thumbPath]),
+    supabase.storage.from('full').remove([fullPath]),
+  ])
   throw error
 }
 
