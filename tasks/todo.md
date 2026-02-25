@@ -4,6 +4,9 @@
 - [ ] Explore options for picking photos from a specific gallery album (folder-based workaround or native app)
 
 ## Done
+- [x] Add upload queue so users can add more files during active upload
+- [x] Update upload status text to show queued/processed/skipped counts clearly
+- [x] Validate queue behavior with lint/build
 - [x] Ensure post-game leaderboard navigation uses replace-history so phone back returns to home, not game
 - [x] Build home hero picker from leaderboard top 3 (fallback to default hero image when no played games)
 - [x] Add left/right soft controls and swipe gesture for hero image selection

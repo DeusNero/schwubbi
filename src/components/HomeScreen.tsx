@@ -20,8 +20,12 @@ interface HeroOption {
 export default function HomeScreen() {
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const uploadQueueRef = useRef<File[]>([])
+  const processingQueueRef = useRef(false)
+  const backfillCompletedRef = useRef(false)
   const defaultHeroSrc = `${import.meta.env.BASE_URL}schwubbi-hero.png`
   const [uploading, setUploading] = useState(false)
+  const [queuedCount, setQueuedCount] = useState(0)
   const [uploadProgress, setUploadProgress] = useState('')
   const [showPaw, setShowPaw] = useState(false)
   const [celebrateUpload, setCelebrateUpload] = useState(false)
@@ -94,91 +98,121 @@ export default function HomeScreen() {
 
   const activeHero = heroOptions[heroIdx] ?? heroOptions[0]
 
-  const handleUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0) return
-
+  const drainUploadQueue = useCallback(async () => {
+    if (processingQueueRef.current) return
+    processingQueueRef.current = true
     setUploading(true)
-    const total = files.length
     let uploaded = 0
     let skipped = 0
+    let failed = 0
+    let processed = 0
 
     try {
-      setUploadProgress('Backfilling existing photos...')
-      const backfill = await backfillMissingContentHashes((progress) => {
-        if (progress.total === 0) {
-          setUploadProgress('Backfilling existing photos... already up to date')
-          return
+      if (!backfillCompletedRef.current) {
+        setUploadProgress('Backfilling existing photos...')
+        const backfill = await backfillMissingContentHashes((progress) => {
+          if (progress.total === 0) {
+            setUploadProgress('Backfilling existing photos... already up to date')
+            return
+          }
+          setUploadProgress(`Backfilling existing photos... ${progress.processed}/${progress.total}`)
+        })
+        if (backfill.failed > 0) {
+          console.warn('Some existing images could not be backfilled', backfill)
+        } else {
+          backfillCompletedRef.current = true
         }
-        setUploadProgress(`Backfilling existing photos... ${progress.processed}/${progress.total}`)
-      })
-      if (backfill.failed > 0) {
-        console.warn('Some existing images could not be backfilled', backfill)
+      }
+
+      while (uploadQueueRef.current.length > 0) {
+        const file = uploadQueueRef.current.shift()
+        if (!file) break
+        setQueuedCount(uploadQueueRef.current.length)
+        processed++
+        setUploadProgress(`Processing ${processed}... ${uploadQueueRef.current.length} queued`)
+        try {
+          const thumbBlob = await imageCompression(file, {
+            maxWidthOrHeight: 400,
+            fileType: 'image/webp',
+            maxSizeMB: 0.05,
+            useWebWorker: true,
+          })
+
+          const fullBlob = await imageCompression(file, {
+            maxWidthOrHeight: 1920,
+            fileType: 'image/webp',
+            maxSizeMB: 0.4,
+            useWebWorker: true,
+          })
+
+          const contentHash = await hashBlobSha256(fullBlob)
+          const exists = await hasImageWithContentHash(contentHash)
+          if (exists) {
+            skipped++
+            setUploadProgress(`Skipped ${skipped} duplicate${skipped !== 1 ? 's' : ''} · ${uploadQueueRef.current.length} queued`)
+            continue
+          }
+
+          const id = crypto.randomUUID()
+          const result = await uploadImage(id, thumbBlob, fullBlob, file.name, contentHash)
+
+          if (result.status === 'duplicate') {
+            skipped++
+            setUploadProgress(`Skipped ${skipped} duplicate${skipped !== 1 ? 's' : ''} · ${uploadQueueRef.current.length} queued`)
+            continue
+          }
+
+          uploaded++
+          setUploadProgress(`Uploaded ${uploaded} · Skipped ${skipped} · ${uploadQueueRef.current.length} queued`)
+        } catch (err) {
+          failed++
+          console.error('Upload failed for', file.name, err)
+          setUploadProgress(`Failed ${failed} · ${uploadQueueRef.current.length} queued`)
+          await new Promise((r) => setTimeout(r, 900))
+        }
+      }
+
+      setUploadProgress(
+        `Done! Uploaded ${uploaded}, skipped ${skipped} duplicate${skipped !== 1 ? 's' : ''}${failed > 0 ? `, failed ${failed}` : ''}`
+      )
+      if (uploaded > 0) {
+        setShowPaw(true)
+        setCelebrateUpload(true)
+        setTimeout(() => setShowPaw(false), 1200)
+        setTimeout(() => setCelebrateUpload(false), 1400)
       }
     } catch (err) {
-      console.error('Backfill failed', err)
-      setUploadProgress('Backfill failed. Duplicate protection may be limited.')
-      await new Promise((r) => setTimeout(r, 1500))
-    }
-
-    for (const [idx, file] of Array.from(files).entries()) {
-      try {
-        setUploadProgress(`Processing ${idx + 1}/${total}...`)
-
-        const thumbBlob = await imageCompression(file, {
-          maxWidthOrHeight: 400,
-          fileType: 'image/webp',
-          maxSizeMB: 0.05,
-          useWebWorker: true,
-        })
-
-        const fullBlob = await imageCompression(file, {
-          maxWidthOrHeight: 1920,
-          fileType: 'image/webp',
-          maxSizeMB: 0.4,
-          useWebWorker: true,
-        })
-
-        const contentHash = await hashBlobSha256(fullBlob)
-        const exists = await hasImageWithContentHash(contentHash)
-        if (exists) {
-          skipped++
-          setUploadProgress(`Skipped duplicate ${skipped}/${total}`)
-          continue
-        }
-
-        const id = crypto.randomUUID()
-        const result = await uploadImage(id, thumbBlob, fullBlob, file.name, contentHash)
-
-        if (result.status === 'duplicate') {
-          skipped++
-          setUploadProgress(`Skipped duplicate ${skipped}/${total}`)
-          continue
-        }
-
-        uploaded++
-        setUploadProgress(`Uploaded ${uploaded}/${total}`)
-      } catch (err) {
-        console.error('Upload failed for', file.name, err)
-        setUploadProgress(`Failed: ${file.name}`)
-        await new Promise((r) => setTimeout(r, 1500))
+      console.error('Upload queue failed', err)
+      setUploadProgress('Upload queue hit an error. You can add photos again to retry.')
+    } finally {
+      processingQueueRef.current = false
+      setQueuedCount(uploadQueueRef.current.length)
+      if (uploadQueueRef.current.length > 0) {
+        void drainUploadQueue()
+      } else {
+        setTimeout(() => {
+          if (!processingQueueRef.current && uploadQueueRef.current.length === 0) {
+            setUploading(false)
+            setUploadProgress('')
+          }
+        }, 2000)
       }
     }
-
-    setUploadProgress(`Done! Uploaded ${uploaded}, skipped ${skipped} duplicate${skipped !== 1 ? 's' : ''}`)
-    if (uploaded > 0) {
-      setShowPaw(true)
-      setCelebrateUpload(true)
-      setTimeout(() => setShowPaw(false), 1200)
-      setTimeout(() => setCelebrateUpload(false), 1400)
-    }
-    setTimeout(() => {
-      setUploading(false)
-      setUploadProgress('')
-    }, 2000)
-
-    if (fileInputRef.current) fileInputRef.current.value = ''
   }, [])
+
+  const handleUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    uploadQueueRef.current.push(...Array.from(files))
+    setQueuedCount(uploadQueueRef.current.length)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+
+    if (!processingQueueRef.current) {
+      void drainUploadQueue()
+    } else {
+      setUploadProgress(`Added ${files.length} more · ${uploadQueueRef.current.length} queued`)
+    }
+  }, [drainUploadQueue])
 
   return (
     <div className="screen" style={{ gap: 28 }}>
@@ -388,7 +422,6 @@ export default function HomeScreen() {
           animate={celebrateUpload ? { rotate: [0, -1.5, 1.5, -0.8, 0.8, 0] } : { rotate: 0 }}
           transition={{ duration: 0.7 }}
           onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
           style={{ position: 'relative', padding: '10px 14px', width: '100%', maxWidth: 360, margin: '0 auto', justifyContent: 'flex-start', gap: 10 }}
         >
           {!(uploading || uploadProgress) ? (
@@ -415,7 +448,7 @@ export default function HomeScreen() {
             </>
           ) : (
             <span style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'left' }}>
-              {uploadProgress || 'Preparing upload...'}
+              {uploadProgress || 'Preparing upload...'}{queuedCount > 0 ? ` (${queuedCount} queued)` : ''}
             </span>
           )}
           <AnimatePresence>
