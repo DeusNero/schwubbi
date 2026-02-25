@@ -398,7 +398,7 @@ export default function HomeScreen() {
           {!(uploading || uploadProgress) ? (
             <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
               <span style={{ fontSize: 13, textAlign: 'left' }}>
-                Photo Here
+                Upload photo
               </span>
               <span style={{ fontSize: 9, color: 'rgba(72, 45, 26, 0.45)', textAlign: 'left' }}>
                 (Total photos: {totalPhotos})
