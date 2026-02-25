@@ -11,6 +11,7 @@
 ## UX
 - Raw ELO numbers are meaningless to users. Keep ELO internally for matchmaking, show rank + win rate + W/L instead
 - If an icon gets too stylized, users stop recognizing it; preserve clear silhouette/readability first, then layer in sketch texture.
+- When routing from a finished game into another screen, use history replacement for that transition; otherwise mobile native Back can reopen gameplay state unexpectedly.
 
 ## Code Quality
 - React hook lint rules can fail on synchronous state updates in `useEffect`; scheduling startup work asynchronously (e.g. `setTimeout(..., 0)`) avoids cascading render warnings.

@@ -4,6 +4,7 @@
 - [ ] Explore options for picking photos from a specific gallery album (folder-based workaround or native app)
 
 ## Done
+- [x] Ensure post-game leaderboard navigation uses replace-history so phone back returns to home, not game
 - [x] Build home hero picker from leaderboard top 3 (fallback to default hero image when no played games)
 - [x] Add left/right soft controls and swipe gesture for hero image selection
 - [x] Add tiny rank indicator badge (#1/#2/#3) on leaderboard-driven hero images
