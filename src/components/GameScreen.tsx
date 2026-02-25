@@ -239,7 +239,7 @@ export default function GameScreen() {
         totalImages={totalImages}
         rank={winnerRank}
         onPlayAgain={() => startTournament(allImages)}
-        onGoHome={() => navigate('/')}
+        onGoHome={() => navigate('/leaderboard')}
       />
     )
   }

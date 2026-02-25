@@ -133,7 +133,7 @@ export default function Finale({
           Play Again
         </button>
         <button className="btn btn-secondary btn-note" onClick={onGoHome}>
-          Home
+          Leaderboard
         </button>
       </motion.div>
     </div>

@@ -120,7 +120,7 @@ export default function HomeScreen() {
           Schwubbi Tournament
         </h1>
         <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>
-          Find the best foto
+          Find the best photo
         </p>
       </motion.div>
 
@@ -131,13 +131,25 @@ export default function HomeScreen() {
         style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 280 }}
       >
         <button className="btn btn-primary btn-note" onClick={() => navigate('/play')} style={{ width: '100%' }}>
-          <motion.span
+          <motion.svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
             animate={{ rotate: 360 }}
             transition={{ repeat: Infinity, duration: 1.4, ease: 'linear' }}
-            style={{ display: 'inline-block' }}
+            style={{ display: 'inline-block', marginRight: 2 }}
+            aria-hidden="true"
           >
-            🧶
-          </motion.span>
+            <circle cx="12" cy="12" r="8.25" fill="#f6c6d8" stroke="#c86e98" strokeWidth="1.4" />
+            <path
+              d="M6.8 12.3c1.4-1.2 2.6-1.7 4.1-1.7 1.8 0 3.2.8 5.2 2.8M7.8 9.4c1.9-1.2 3.5-1.3 5.3-.5m-4.5 7c1.8-.7 3.4-.5 5.6.7"
+              stroke="#ad4f7e"
+              strokeLinecap="round"
+              strokeWidth="1.35"
+            />
+            <path d="M18.6 7.8l2.3-1.7" stroke="#ad4f7e" strokeLinecap="round" strokeWidth="1.35" />
+          </motion.svg>
           Play
         </button>
 

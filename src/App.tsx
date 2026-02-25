@@ -11,6 +11,7 @@ export default function App() {
       <Route path="/play" element={<GameScreen />} />
       <Route path="/leaderboard" element={<Leaderboard />} />
       <Route path="/backup" element={<BackupRestore />} />
+      <Route path="*" element={<HomeScreen />} />
     </Routes>
   )
 }

@@ -16,6 +16,7 @@
 - For `useCallback`, keep dependency arrays aligned with inferred dependencies (`allImages`, `startTournament`, etc.) to avoid preserve-manual-memoization errors.
 - When `vite.config.ts` uses a subpath `base` (like `/schwubbi/`), local preview may show only background if Router basename is forced to that subpath on `localhost/`; resolve basename dynamically based on current path.
 - Background lifecycle bugs can bypass one handler path; guard at multiple layers (sound playback gate + gameplay progression gate + visibility listeners) so hidden apps cannot continue audio loops.
+- Add a `*` catch-all route for SPA safety; if path matching drifts (PWA stale URL or basename mismatch), fallback to home instead of rendering an empty screen.
 
 ## CRITICAL — Shared Origin
 - Multiple apps on the same GitHub Pages domain (deusnero.github.io) share the SAME origin. Service workers, caches, and localStorage are all shared.

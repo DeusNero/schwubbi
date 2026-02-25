@@ -13,8 +13,13 @@ if ('serviceWorker' in navigator) {
 
 const normalizedBasenameRaw = import.meta.env.BASE_URL.replace(/\/+$/, '')
 const normalizedBasename = normalizedBasenameRaw || '/'
+const path = typeof window !== 'undefined' ? window.location.pathname : '/'
+const pathMatchesBase =
+  normalizedBasename === '/'
+    ? true
+    : path === normalizedBasename || path.startsWith(`${normalizedBasename}/`)
 const resolvedBasename =
-  typeof window !== 'undefined' && !window.location.pathname.startsWith(normalizedBasename)
+  typeof window !== 'undefined' && !pathMatchesBase
     ? '/'
     : normalizedBasename
 
