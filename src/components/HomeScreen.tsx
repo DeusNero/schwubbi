@@ -17,6 +17,18 @@ interface HeroOption {
   rank: number | null
 }
 
+const HERO_MEDAL_COLORS: Record<number, string> = {
+  1: 'var(--gold)',
+  2: 'var(--silver)',
+  3: 'var(--bronze)',
+}
+
+const HERO_MEDAL_ICONS: Record<number, string> = {
+  1: '👑',
+  2: '🥈',
+  3: '🥉',
+}
+
 interface UploadQueueItem {
   file: File
   batchId: string
@@ -356,14 +368,18 @@ export default function HomeScreen() {
                     bottom: -2,
                     fontSize: 10,
                     lineHeight: 1,
-                    padding: '3px 5px',
-                    borderRadius: 8,
-                    border: '1px solid rgba(113, 72, 39, 0.3)',
-                    background: 'rgba(255, 245, 228, 0.92)',
-                    color: 'var(--text-dim)',
+                    padding: '3px 6px',
+                    borderRadius: 9,
+                    border: `1px solid ${HERO_MEDAL_COLORS[activeHero.rank]}`,
+                    background: 'rgba(255, 248, 236, 0.92)',
+                    color: HERO_MEDAL_COLORS[activeHero.rank],
                     fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3,
                   }}
                 >
+                  <span aria-hidden="true">{HERO_MEDAL_ICONS[activeHero.rank]}</span>
                   #{activeHero.rank}
                 </div>
               )}

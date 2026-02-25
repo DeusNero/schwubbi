@@ -13,6 +13,7 @@
 - If an icon gets too stylized, users stop recognizing it; preserve clear silhouette/readability first, then layer in sketch texture.
 - When routing from a finished game into another screen, use history replacement for that transition; otherwise mobile native Back can reopen gameplay state unexpectedly.
 - Keep deployment statements strictly consistent with git state; if a user reports behavior that conflicts with expected rollout, verify `git log`/remote status first before giving test instructions.
+- When a user requests a style parity change (e.g., medals on leaderboard and home hero), mirror it across both surfaces explicitly and verify before claiming completion.
 
 ## Code Quality
 - React hook lint rules can fail on synchronous state updates in `useEffect`; scheduling startup work asynchronously (e.g. `setTimeout(..., 0)`) avoids cascading render warnings.
