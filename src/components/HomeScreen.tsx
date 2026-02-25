@@ -595,8 +595,8 @@ export default function HomeScreen() {
               <span style={{ fontSize: 13, textAlign: 'left' }}>
                 Photo Here
               </span>
-              <span style={{ fontSize: 10, color: 'var(--text-dim)', textAlign: 'left' }}>
-                (Total fotos: {totalPhotos})
+              <span style={{ fontSize: 9, color: 'rgba(72, 45, 26, 0.45)', textAlign: 'left' }}>
+                (Total photos: {totalPhotos})
               </span>
             </span>
           ) : (
