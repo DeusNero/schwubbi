@@ -4,6 +4,9 @@
 - [ ] Explore options for picking photos from a specific gallery album (folder-based workaround or native app)
 
 ## Done
+- [x] Move upload processing to app-wide manager so queue continues across routes
+- [x] Resume queued uploads when app returns to foreground/visible
+- [x] Keep stop-upload control centered while active
 - [x] Keep + affordance visible during active uploads
 - [x] Add stop upload control for active queue
 - [x] Harden bulk uploads with retry and improved failure messaging

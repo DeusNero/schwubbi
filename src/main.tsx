@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App'
 import { requestPersistentStorage } from './lib/storage'
+import { UploadManagerProvider } from './upload/UploadManager'
 
 requestPersistentStorage()
 
@@ -26,7 +27,9 @@ const resolvedBasename =
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter basename={resolvedBasename}>
-      <App />
+      <UploadManagerProvider>
+        <App />
+      </UploadManagerProvider>
     </BrowserRouter>
   </StrictMode>,
 )

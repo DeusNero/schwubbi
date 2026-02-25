@@ -16,6 +16,7 @@
 - When a user requests a style parity change (e.g., medals on leaderboard and home hero), mirror it across both surfaces explicitly and verify before claiming completion.
 - Preserve critical affordance icons during async states (e.g., keep upload `+` visible while processing) so users know actions remain available.
 - Replace static footer version text with build metadata when users ask for deployment recency; derive it at build time so shipped builds are self-identifying.
+- For long-running tasks like uploads, local screen state is fragile; use app-wide state so work survives route changes and can resume when app becomes visible again.
 
 ## Code Quality
 - React hook lint rules can fail on synchronous state updates in `useEffect`; scheduling startup work asynchronously (e.g. `setTimeout(..., 0)`) avoids cascading render warnings.
