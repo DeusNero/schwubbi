@@ -36,7 +36,7 @@ export default function Finale({
         particleCount: 80,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#ffd700', '#e94560', '#fff', '#ff6b6b'],
+        colors: ['#bf7a1b', '#df7a37', '#f9e8c5', '#c18a55'],
       })
     }
     fire()
@@ -47,14 +47,14 @@ export default function Finale({
   const fullUrl = getFullUrl(winnerId)
 
   return (
-    <div className="screen" style={{ gap: 24, background: 'var(--bg)' }}>
+    <div className="screen" style={{ gap: 24 }}>
       <motion.div
         initial={{ scale: 0, rotate: -10 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ type: 'spring', damping: 12, delay: 0.3 }}
         style={{ textAlign: 'center' }}
       >
-        <div style={{ fontSize: 16, color: 'var(--gold)', fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>
+        <div className="paper-note" style={{ fontSize: 16, color: 'var(--gold)', fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>
           ★ THE CHAMPION ★
         </div>
       </motion.div>
@@ -72,7 +72,7 @@ export default function Finale({
           borderRadius: '50%',
           objectFit: 'cover',
           border: '4px solid var(--gold)',
-          boxShadow: '0 0 40px rgba(255, 215, 0, 0.4), 0 8px 32px rgba(0,0,0,0.5)',
+          boxShadow: '0 0 30px rgba(191, 122, 27, 0.3), 0 8px 26px rgba(68, 39, 18, 0.32)',
           cursor: 'pointer',
         }}
       />
@@ -91,13 +91,8 @@ export default function Finale({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          style={{
-            textAlign: 'center',
-            background: 'var(--bg-card)',
-            padding: '16px 24px',
-            borderRadius: 'var(--radius)',
-            border: '1px solid rgba(255,255,255,0.1)',
-          }}
+          className="paper-card"
+          style={{ textAlign: 'center', maxWidth: 320 }}
         >
           <div style={{ fontSize: 24, fontWeight: 700 }}>#{rank} of {totalImages}</div>
           <div style={{ fontSize: 14, color: 'var(--text-dim)', marginTop: 4 }}>
@@ -134,10 +129,10 @@ export default function Finale({
         transition={{ delay: 0.9 }}
         style={{ display: 'flex', gap: 12, marginTop: 8 }}
       >
-        <button className="btn btn-primary" onClick={onPlayAgain}>
+        <button className="btn btn-primary btn-note" onClick={onPlayAgain}>
           Play Again
         </button>
-        <button className="btn btn-secondary" onClick={onGoHome}>
+        <button className="btn btn-secondary btn-note" onClick={onGoHome}>
           Home
         </button>
       </motion.div>

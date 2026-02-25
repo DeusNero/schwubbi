@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import type { Easing } from 'framer-motion'
 import type { Matchup } from '../engine/tournament'
 import { getThumbUrl } from '../lib/supabase'
 import { playLaunch, playTap, playElimination } from '../lib/sounds'
@@ -58,7 +59,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
   }, [matchup.left.id, matchup.right.id])
 
   const handleChoice = useCallback(
-    (id: string, _isTimeout = false) => {
+    (id: string) => {
       if (phase === 'chosen') return
       if (timerRef.current) clearTimeout(timerRef.current)
       if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current)
@@ -92,8 +93,8 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
     height: imgSize,
     borderRadius: '50%',
     objectFit: 'cover',
-    border: '3px solid rgba(255,255,255,0.2)',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+    border: '3px solid rgba(120, 82, 47, 0.35)',
+    boxShadow: '0 10px 28px rgba(74, 46, 24, 0.28)',
     cursor: 'pointer',
     userSelect: 'none',
     WebkitUserSelect: 'none',
@@ -106,7 +107,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
     if (chosenId === id) {
       return {
         border: '3px solid var(--gold)',
-        boxShadow: '0 0 30px rgba(255, 215, 0, 0.6)',
+        boxShadow: '0 0 22px rgba(191, 122, 27, 0.55)',
       }
     }
     return { opacity: 0.3, filter: 'grayscale(1)' }
@@ -133,10 +134,11 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
     y: [0, riseY * 0.5, riseY, riseY * 0.85, riseY * 0.5, riseY * 0.15, 0],
   }
 
+  const animationEase: Easing[] = ['easeIn', 'easeOut', 'easeIn', 'linear', 'linear', 'easeOut']
   const animationTransition = {
     duration: ANIMATION_DURATION,
     times: [0, 0.15, 0.35, 0.5, 0.65, 0.85, 1],
-    ease: ['easeIn', 'easeOut', 'easeIn', 'linear', 'linear', 'easeOut'] as any,
+    ease: animationEase,
   }
 
   const frozenLeft = { x: -spreadX, y: 0 }
@@ -145,14 +147,16 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
   return (
     <div className="screen">
       <div
+        className="paper-note"
         style={{
           position: 'absolute',
-          top: 48,
+          top: 38,
           fontSize: 14,
           color: 'var(--text-dim)',
           fontWeight: 600,
           letterSpacing: 1,
           textTransform: 'uppercase',
+          padding: '8px 16px',
         }}
       >
         {roundLabel}
@@ -171,7 +175,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
             fontSize: 32,
             fontWeight: 800,
             fontVariantNumeric: 'tabular-nums',
-            color: timeLeft <= TIMEOUT_EXTRA ? 'var(--accent)' : 'rgba(255,255,255,0.3)',
+            color: timeLeft <= TIMEOUT_EXTRA ? 'var(--accent)' : 'rgba(72,45,26,0.35)',
             textShadow: timeLeft <= TIMEOUT_EXTRA ? '0 0 20px var(--accent-glow)' : 'none',
           }}>
             {timeLeft}
@@ -183,7 +187,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                style={{ fontSize: 18, fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}
+                style={{ fontSize: 18, fontWeight: 700, color: 'rgba(72,45,26,0.56)', marginTop: 4 }}
               >
                 CHOOSE!
               </motion.div>

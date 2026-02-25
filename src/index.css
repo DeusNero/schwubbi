@@ -7,21 +7,27 @@
 }
 
 :root {
-  --bg: #1a1a2e;
-  --bg-card: #16213e;
-  --accent: #e94560;
-  --accent-glow: rgba(233, 69, 96, 0.4);
-  --gold: #ffd700;
-  --silver: #c0c0c0;
-  --bronze: #cd7f32;
-  --text: #eee;
-  --text-dim: #8892a4;
+  --bg: #b5895d;
+  --bg-cream: #f7edd9;
+  --bg-card: #edd8b5;
+  --paper-note: #f6e8ca;
+  --accent: #df7a37;
+  --accent-glow: rgba(223, 122, 55, 0.28);
+  --border: rgba(99, 66, 36, 0.32);
+  --text: #382616;
+  --text-dim: #76583d;
+  --gold: #bf7a1b;
+  --silver: #8e7f6f;
+  --bronze: #9a5f2e;
   --radius: 16px;
+  --radius-note: 14px;
 
-  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    Roboto, sans-serif;
+  font-family: 'Trebuchet MS', 'Avenir Next', 'Segoe UI', Roboto, sans-serif;
   color: var(--text);
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 244, 224, 0.26) 0%, transparent 42%),
+    radial-gradient(circle at 86% 78%, rgba(132, 76, 25, 0.16) 0%, transparent 36%),
+    linear-gradient(160deg, #be9367 0%, #a4764e 100%);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
@@ -52,6 +58,9 @@ button {
   justify-content: center;
   padding: 24px;
   padding-bottom: env(safe-area-inset-bottom, 24px);
+  background:
+    radial-gradient(circle at 10% 15%, rgba(255, 244, 228, 0.2), transparent 38%),
+    radial-gradient(circle at 92% 85%, rgba(145, 89, 40, 0.12), transparent 45%);
 }
 
 .btn {
@@ -59,33 +68,126 @@ button {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 14px 28px;
-  border-radius: var(--radius);
+  padding: 13px 24px;
+  border-radius: 14px 17px 13px 18px;
   font-size: 16px;
-  font-weight: 600;
-  transition: transform 0.15s, box-shadow 0.15s;
+  font-weight: 700;
+  color: var(--text);
+  border: 1px solid var(--border);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, filter 0.14s ease;
+  position: relative;
+  isolation: isolate;
 }
 
 .btn:active {
-  transform: scale(0.96);
+  transform: translateY(1px) scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(132deg, rgba(255, 252, 244, 0.55), rgba(233, 204, 160, 0.28)),
+    repeating-linear-gradient(
+      -32deg,
+      rgba(104, 72, 40, 0.055) 0px,
+      rgba(104, 72, 40, 0.055) 1px,
+      transparent 1px,
+      transparent 6px
+    );
+  z-index: -1;
+}
+
+.btn:hover {
+  filter: saturate(1.05);
 }
 
 .btn-primary {
-  background: var(--accent);
-  color: white;
-  box-shadow: 0 4px 20px var(--accent-glow);
+  background: linear-gradient(142deg, #ef9a58, #d86f2d);
+  color: #fff9ef;
+  border-color: rgba(127, 63, 22, 0.45);
+  box-shadow: 0 8px 20px var(--accent-glow), 0 3px 0 rgba(120, 67, 24, 0.28);
 }
 
 .btn-secondary {
-  background: var(--bg-card);
+  background: linear-gradient(160deg, #f3e2c1, #ead3aa);
   color: var(--text);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 14px rgba(76, 45, 22, 0.14);
+}
+
+.btn-note {
+  clip-path: polygon(2% 14%, 8% 2%, 93% 0, 99% 15%, 97% 92%, 89% 99%, 6% 100%, 0 90%);
+}
+
+.paper-card {
+  width: 100%;
+  max-width: 360px;
+  background:
+    linear-gradient(165deg, rgba(255, 248, 235, 0.82), rgba(236, 210, 170, 0.84)),
+    repeating-linear-gradient(
+      9deg,
+      rgba(108, 71, 32, 0.05) 0px,
+      rgba(108, 71, 32, 0.05) 1px,
+      transparent 1px,
+      transparent 7px
+    );
+  border-radius: var(--radius-note);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 22px rgba(75, 45, 21, 0.12);
+  padding: 20px;
+}
+
+.paper-note {
+  background:
+    linear-gradient(155deg, rgba(249, 237, 213, 0.95), rgba(238, 215, 174, 0.9));
+  border-radius: 11px 17px 13px 15px;
+  border: 1px dashed rgba(121, 79, 43, 0.35);
+  padding: 10px 14px;
+}
+
+.paper-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(109, 70, 36, 0.28);
+  background: rgba(255, 247, 229, 0.8);
+  color: var(--text);
+  font-size: 16px;
+  font-family: inherit;
+  outline: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.paper-input::placeholder {
+  color: rgba(89, 58, 33, 0.58);
+}
+
+.paper-input:focus {
+  border-color: rgba(223, 122, 55, 0.55);
+  box-shadow: 0 0 0 3px rgba(223, 122, 55, 0.18);
+}
+
+.icon-sketch {
+  width: 1.1em;
+  height: 1.1em;
+  stroke: currentColor;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
 }
 
 .btn-icon {
   width: 56px;
   height: 56px;
-  border-radius: 50%;
+  border-radius: 17px 19px 15px 20px;
   padding: 0;
   font-size: 24px;
 }

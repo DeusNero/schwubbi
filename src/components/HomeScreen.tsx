@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { uploadImage } from '../lib/supabase'
 import imageCompression from 'browser-image-compression'
+import { BackupSketchIcon, LeaderboardSketchIcon } from './icons/SketchIcons'
 
 export default function HomeScreen() {
   const navigate = useNavigate()
@@ -57,19 +58,28 @@ export default function HomeScreen() {
   }, [])
 
   return (
-    <div className="screen" style={{ gap: 32 }}>
+    <div className="screen" style={{ gap: 28 }}>
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', damping: 15 }}
-        style={{ textAlign: 'center' }}
+        className="paper-card"
+        style={{ textAlign: 'center', maxWidth: 320 }}
       >
         <img
           src={`${import.meta.env.BASE_URL}schwubbi-hero.png`}
           alt="Schwubbi"
-          style={{ width: 96, height: 96, borderRadius: '50%', objectFit: 'cover', marginBottom: 8 }}
+          style={{
+            width: 96,
+            height: 96,
+            borderRadius: '50%',
+            objectFit: 'cover',
+            marginBottom: 10,
+            border: '3px solid rgba(98, 62, 32, 0.32)',
+            boxShadow: '0 8px 22px rgba(78, 46, 21, 0.2)',
+          }}
         />
-        <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>
+        <h1 style={{ fontSize: 30, fontWeight: 800, marginBottom: 6, letterSpacing: 0.4 }}>
           Cat Tournament
         </h1>
         <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>
@@ -83,16 +93,18 @@ export default function HomeScreen() {
         transition={{ delay: 0.15 }}
         style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 280 }}
       >
-        <button className="btn btn-primary" onClick={() => navigate('/play')} style={{ width: '100%' }}>
+        <button className="btn btn-primary btn-note" onClick={() => navigate('/play')} style={{ width: '100%' }}>
           ⚔️ Play
         </button>
 
-        <button className="btn btn-secondary" onClick={() => navigate('/leaderboard')} style={{ width: '100%' }}>
-          🏆 Leaderboard
+        <button className="btn btn-secondary btn-note" onClick={() => navigate('/leaderboard')} style={{ width: '100%' }}>
+          <LeaderboardSketchIcon />
+          Leaderboard
         </button>
 
-        <button className="btn btn-secondary" onClick={() => navigate('/backup')} style={{ width: '100%' }}>
-          💾 Backup & Restore
+        <button className="btn btn-secondary btn-note" onClick={() => navigate('/backup')} style={{ width: '100%' }}>
+          <BackupSketchIcon />
+          Backup & Restore
         </button>
       </motion.div>
 
@@ -103,10 +115,10 @@ export default function HomeScreen() {
         style={{ position: 'absolute', bottom: 40, right: 24 }}
       >
         <button
-          className="btn btn-icon btn-primary"
+          className="btn btn-icon btn-primary btn-note"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          style={{ fontSize: 28 }}
+          style={{ fontSize: 30 }}
         >
           +
         </button>
@@ -121,7 +133,7 @@ export default function HomeScreen() {
         style={{ display: 'none' }}
       />
 
-      <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>
+      <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center', fontSize: 11, color: 'rgba(64,40,24,0.33)' }}>
         v1.1.0
       </div>
 
@@ -132,11 +144,12 @@ export default function HomeScreen() {
           style={{
             position: 'absolute',
             bottom: 110,
-            background: 'var(--bg-card)',
-            padding: '12px 20px',
-            borderRadius: 'var(--radius)',
+            background: 'var(--paper-note)',
+            padding: '12px 18px',
+            borderRadius: 'var(--radius-note)',
             fontSize: 14,
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: '1px dashed rgba(124, 82, 45, 0.44)',
+            boxShadow: '0 6px 18px rgba(70, 42, 20, 0.2)',
           }}
         >
           {uploadProgress}

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { getAllElos } from '../lib/storage'
 import type { EloEntry } from '../lib/storage'
 import { getFullUrl } from '../lib/supabase'
+import { LeaderboardSketchIcon } from './icons/SketchIcons'
 
 const MEDAL_COLORS = ['var(--gold)', 'var(--silver)', 'var(--bronze)']
 const MEDAL_ICONS = ['👑', '🥈', '🥉', '4', '5']
@@ -32,9 +33,9 @@ export default function Leaderboard() {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-          style={{ fontSize: 48 }}
+          style={{ fontSize: 48, color: 'var(--accent)' }}
         >
-          🏆
+          <LeaderboardSketchIcon size={48} />
         </motion.div>
       </div>
     )
@@ -52,13 +53,16 @@ export default function Leaderboard() {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', maxWidth: 360 }}>
         <button
-          className="btn btn-secondary"
+          className="btn btn-secondary btn-note"
           onClick={() => navigate('/')}
           style={{ padding: '8px 16px', fontSize: 14 }}
         >
           ← Back
         </button>
-        <h2 style={{ fontSize: 22, fontWeight: 700 }}>🏆 Leaderboard</h2>
+        <h2 style={{ fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <LeaderboardSketchIcon size={24} />
+          Leaderboard
+        </h2>
       </div>
 
       {topEntries.length === 0 ? (
@@ -75,16 +79,17 @@ export default function Leaderboard() {
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: i * 0.1 }}
               onClick={() => setViewingImage(entry.imageId)}
+              className="paper-card"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 14,
-                background: 'var(--bg-card)',
                 padding: 14,
-                borderRadius: 'var(--radius)',
-                border: i === 0 ? '1px solid var(--gold)' : '1px solid rgba(255,255,255,0.06)',
+                borderRadius: 'var(--radius-note)',
+                border: i === 0 ? '1px solid var(--gold)' : '1px solid var(--border)',
                 boxShadow: i === 0 ? '0 0 20px rgba(255, 215, 0, 0.15)' : undefined,
                 cursor: 'pointer',
+                maxWidth: 360,
               }}
             >
               <div
@@ -107,7 +112,7 @@ export default function Leaderboard() {
                   height: 56,
                   borderRadius: '50%',
                   objectFit: 'cover',
-                  border: `2px solid ${MEDAL_COLORS[i] ?? 'rgba(255,255,255,0.1)'}`,
+                  border: `2px solid ${MEDAL_COLORS[i] ?? 'rgba(118,88,61,0.4)'}`,
                 }}
               />
 

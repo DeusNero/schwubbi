@@ -66,7 +66,11 @@ export default function GameScreen() {
   }, [])
 
   useEffect(() => {
-    startTournament()
+    const id = window.setTimeout(() => {
+      startTournament()
+    }, 0)
+
+    return () => window.clearTimeout(id)
   }, [startTournament])
 
   const handleResult = useCallback(
@@ -138,20 +142,22 @@ export default function GameScreen() {
       setMatchesInRound(nextBracket.length)
       setRoundWinners([])
     },
-    [matchups, currentIdx, roundWinners]
+    [allImages, currentIdx, matchups, roundWinners, startTournament]
   )
 
   if (state === 'loading') {
     return (
-      <div className="screen">
+      <div className="screen" style={{ gap: 16 }}>
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
           style={{ fontSize: 48 }}
         >
-          🐱
+          🧶
         </motion.div>
-        <p style={{ color: 'var(--text-dim)', marginTop: 16 }}>Loading cats...</p>
+        <div className="paper-note">
+          <p style={{ color: 'var(--text-dim)', fontWeight: 600 }}>Loading cats...</p>
+        </div>
       </div>
     )
   }
@@ -159,14 +165,16 @@ export default function GameScreen() {
   if (state === 'not-enough') {
     return (
       <div className="screen" style={{ gap: 16, textAlign: 'center' }}>
-        <div style={{ fontSize: 48 }}>📷</div>
-        <h2>Not enough photos</h2>
-        <p style={{ color: 'var(--text-dim)', maxWidth: 280 }}>
-          Upload at least 2 cat photos to start a tournament. Tap the + button on the home screen.
-        </p>
-        <button className="btn btn-primary" onClick={() => navigate('/')}>
-          Go Home
-        </button>
+        <div className="paper-card" style={{ maxWidth: 320 }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>📷</div>
+          <h2 style={{ marginBottom: 8 }}>Not enough photos</h2>
+          <p style={{ color: 'var(--text-dim)', maxWidth: 280, margin: '0 auto 14px' }}>
+            Upload at least 2 cat photos to start a tournament. Tap the + button on the home screen.
+          </p>
+          <button className="btn btn-primary btn-note" onClick={() => navigate('/')}>
+            Go Home
+          </button>
+        </div>
       </div>
     )
   }

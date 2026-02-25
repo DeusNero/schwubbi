@@ -8,6 +8,7 @@ import {
   setBackupCode,
 } from '../lib/storage'
 import { supabase } from '../lib/supabase'
+import { BackupSketchIcon } from './icons/SketchIcons'
 
 function generateCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -97,50 +98,34 @@ export default function BackupRestore() {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', maxWidth: 360 }}>
         <button
-          className="btn btn-secondary"
+          className="btn btn-secondary btn-note"
           onClick={() => navigate('/')}
           style={{ padding: '8px 16px', fontSize: 14 }}
         >
           ← Back
         </button>
-        <h2 style={{ fontSize: 22, fontWeight: 700 }}>💾 Backup & Restore</h2>
+        <h2 style={{ fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <BackupSketchIcon size={24} />
+          Backup & Restore
+        </h2>
       </div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        style={{
-          width: '100%',
-          maxWidth: 360,
-          background: 'var(--bg-card)',
-          borderRadius: 'var(--radius)',
-          padding: 20,
-          border: '1px solid rgba(255,255,255,0.06)',
-        }}
+        className="paper-card"
       >
         <h3 style={{ fontSize: 16, marginBottom: 8 }}>Create Backup</h3>
         <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 16 }}>
           Save your rankings to the cloud. You'll get a short code to restore on any device.
         </p>
         {existingCode && (
-          <div
-            style={{
-              background: 'rgba(255,215,0,0.1)',
-              padding: '10px 14px',
-              borderRadius: 8,
-              marginBottom: 12,
-              fontSize: 14,
-              fontWeight: 600,
-              color: 'var(--gold)',
-              textAlign: 'center',
-              letterSpacing: 2,
-            }}
-          >
+          <div className="paper-note" style={{ marginBottom: 12, fontSize: 14, fontWeight: 700, color: 'var(--gold)', textAlign: 'center', letterSpacing: 2 }}>
             {existingCode}
           </div>
         )}
         <button
-          className="btn btn-primary"
+          className="btn btn-primary btn-note"
           onClick={handleBackup}
           disabled={busy}
           style={{ width: '100%' }}
@@ -153,14 +138,7 @@ export default function BackupRestore() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        style={{
-          width: '100%',
-          maxWidth: 360,
-          background: 'var(--bg-card)',
-          borderRadius: 'var(--radius)',
-          padding: 20,
-          border: '1px solid rgba(255,255,255,0.06)',
-        }}
+        className="paper-card"
       >
         <h3 style={{ fontSize: 16, marginBottom: 8 }}>Restore Rankings</h3>
         <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 16 }}>
@@ -171,24 +149,16 @@ export default function BackupRestore() {
           placeholder="e.g. CAT-7X3ABC"
           value={restoreInput}
           onChange={(e) => setRestoreInput(e.target.value)}
+          className="paper-input"
           style={{
-            width: '100%',
-            padding: '12px 14px',
-            borderRadius: 8,
-            border: '1px solid rgba(255,255,255,0.15)',
-            background: 'rgba(255,255,255,0.05)',
-            color: 'var(--text)',
-            fontSize: 16,
-            fontFamily: 'inherit',
             textAlign: 'center',
             letterSpacing: 2,
             textTransform: 'uppercase',
             marginBottom: 12,
-            outline: 'none',
           }}
         />
         <button
-          className="btn btn-secondary"
+          className="btn btn-secondary btn-note"
           onClick={handleRestore}
           disabled={busy || !restoreInput.trim()}
           style={{ width: '100%' }}
