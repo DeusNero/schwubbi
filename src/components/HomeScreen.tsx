@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { uploadImage } from '../lib/supabase'
 import imageCompression from 'browser-image-compression'
-import { BackupSketchIcon, LeaderboardSketchIcon } from './icons/SketchIcons'
+import { LeaderboardSketchIcon } from './icons/SketchIcons'
 
 export default function HomeScreen() {
   const navigate = useNavigate()
@@ -67,6 +67,18 @@ export default function HomeScreen() {
 
   return (
     <div className="screen" style={{ gap: 28 }}>
+      <motion.button
+        initial={{ y: -14, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.1 }}
+        className="btn btn-icon btn-secondary btn-note"
+        onClick={() => navigate('/backup')}
+        style={{ position: 'absolute', top: 24, right: 24, fontSize: 22 }}
+        aria-label="Open settings"
+      >
+        ⚙
+      </motion.button>
+
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -119,17 +131,19 @@ export default function HomeScreen() {
         style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 280 }}
       >
         <button className="btn btn-primary btn-note" onClick={() => navigate('/play')} style={{ width: '100%' }}>
-          ⚔️ Play
+          <motion.span
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 1.4, ease: 'linear' }}
+            style={{ display: 'inline-block' }}
+          >
+            🧶
+          </motion.span>
+          Play
         </button>
 
         <button className="btn btn-secondary btn-note" onClick={() => navigate('/leaderboard')} style={{ width: '100%' }}>
           <LeaderboardSketchIcon />
           Leaderboard
-        </button>
-
-        <button className="btn btn-secondary btn-note" onClick={() => navigate('/backup')} style={{ width: '100%' }}>
-          <BackupSketchIcon />
-          Backup & Restore
         </button>
       </motion.div>
 
