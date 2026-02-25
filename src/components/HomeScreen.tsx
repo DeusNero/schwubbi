@@ -39,11 +39,14 @@ interface UploadBatchMeta {
   id: string
   startedAt: string
   selected: number
+  isLargeBatch: boolean
   processed: number
   uploaded: number
   skipped: number
   failed: number
 }
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export default function HomeScreen() {
   const navigate = useNavigate()
@@ -58,6 +61,10 @@ export default function HomeScreen() {
   const [stoppingUpload, setStoppingUpload] = useState(false)
   const [queuedCount, setQueuedCount] = useState(0)
   const [uploadProgress, setUploadProgress] = useState('')
+  const [sessionUploaded, setSessionUploaded] = useState(0)
+  const [sessionSkipped, setSessionSkipped] = useState(0)
+  const [sessionFailed, setSessionFailed] = useState(0)
+  const [lastUploadEvent, setLastUploadEvent] = useState('')
   const [showPaw, setShowPaw] = useState(false)
   const [celebrateUpload, setCelebrateUpload] = useState(false)
   const [totalPhotos, setTotalPhotos] = useState(0)
@@ -173,16 +180,21 @@ export default function HomeScreen() {
     thumbBlob: Blob,
     fullBlob: Blob,
     filename: string,
-    contentHash: string
+    contentHash: string,
+    isLargeBatch: boolean
   ) => {
     let lastError: unknown = null
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    const maxAttempts = isLargeBatch ? 4 : 2
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         return await uploadImage(id, thumbBlob, fullBlob, filename, contentHash)
       } catch (err) {
         lastError = err
-        if (attempt === 2) break
-        await new Promise((r) => setTimeout(r, 500 * attempt))
+        if (attempt === maxAttempts) break
+        const delay = isLargeBatch
+          ? 650 * 2 ** (attempt - 1) + Math.floor(Math.random() * 220)
+          : 500 * attempt
+        await sleep(delay)
       }
     }
     throw lastError
@@ -192,10 +204,15 @@ export default function HomeScreen() {
     if (processingQueueRef.current) return
     processingQueueRef.current = true
     setUploading(true)
+    setSessionUploaded(0)
+    setSessionSkipped(0)
+    setSessionFailed(0)
+    setLastUploadEvent('')
     let uploaded = 0
     let skipped = 0
     let failed = 0
     let processed = 0
+    let consecutiveFailures = 0
 
     try {
       if (!backfillCompletedRef.current) {
@@ -219,6 +236,7 @@ export default function HomeScreen() {
         if (!nextItem) break
         const { file, batchId } = nextItem
         const batch = uploadBatchMetaRef.current[batchId]
+        const isLargeBatch = batch?.isLargeBatch ?? false
         setQueuedCount(uploadQueueRef.current.length)
         processed++
         setUploadProgress(`Processing ${processed}... ${uploadQueueRef.current.length} queued`)
@@ -241,6 +259,8 @@ export default function HomeScreen() {
           const exists = await hasImageWithContentHash(contentHash)
           if (exists) {
             skipped++
+            setSessionSkipped(skipped)
+            setLastUploadEvent(`Duplicate found: ${file.name}`)
             if (batch) {
               batch.skipped++
             }
@@ -249,10 +269,12 @@ export default function HomeScreen() {
           }
 
           const id = crypto.randomUUID()
-          const result = await uploadWithRetry(id, thumbBlob, fullBlob, file.name, contentHash)
+          const result = await uploadWithRetry(id, thumbBlob, fullBlob, file.name, contentHash, isLargeBatch)
 
           if (result.status === 'duplicate') {
             skipped++
+            setSessionSkipped(skipped)
+            setLastUploadEvent(`Duplicate found: ${file.name}`)
             if (batch) {
               batch.skipped++
             }
@@ -261,18 +283,25 @@ export default function HomeScreen() {
           }
 
           uploaded++
+          setSessionUploaded(uploaded)
+          setLastUploadEvent(`Uploaded: ${file.name}`)
+          consecutiveFailures = 0
+          setTotalPhotos((prev) => prev + 1)
           if (batch) {
             batch.uploaded++
           }
           setUploadProgress(`Uploaded ${uploaded} · Skipped ${skipped} · ${uploadQueueRef.current.length} queued`)
         } catch (err) {
+          consecutiveFailures++
           failed++
+          setSessionFailed(failed)
+          setLastUploadEvent(`Failed: ${file.name}`)
           if (batch) {
             batch.failed++
           }
           console.error('Upload failed for', file.name, err)
-          setUploadProgress(`Failed ${failed} · ${uploadQueueRef.current.length} queued (check connection)`)
-          await new Promise((r) => setTimeout(r, 900))
+          setUploadProgress(`Failed ${failed} · ${uploadQueueRef.current.length} queued (retrying with backoff)`)
+          await sleep(isLargeBatch && consecutiveFailures >= 3 ? 3600 : 1200)
         } finally {
           if (batch) {
             batch.processed++
@@ -288,6 +317,10 @@ export default function HomeScreen() {
               })
               delete uploadBatchMetaRef.current[batch.id]
             }
+          }
+          // Gentle pacing helps avoid mobile network/server burst failures on huge batches.
+          if (isLargeBatch) {
+            await sleep(120)
           }
         }
       }
@@ -315,6 +348,12 @@ export default function HomeScreen() {
       } else {
         setStoppingUpload(false)
         stopRequestedRef.current = false
+        try {
+          const images = await fetchAllImages()
+          setTotalPhotos(images.length)
+        } catch (err) {
+          console.warn('Failed to refresh total photo count after upload', err)
+        }
         setTimeout(() => {
           if (!processingQueueRef.current && uploadQueueRef.current.length === 0) {
             setUploading(false)
@@ -344,6 +383,7 @@ export default function HomeScreen() {
       id: batchId,
       startedAt: new Date().toISOString(),
       selected: files.length,
+      isLargeBatch: files.length > 50,
       processed: 0,
       uploaded: 0,
       skipped: 0,
@@ -600,8 +640,18 @@ export default function HomeScreen() {
               </span>
             </span>
           ) : (
-            <span style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'left' }}>
-              {uploadProgress || 'Preparing upload...'}{queuedCount > 0 ? ` (${queuedCount} queued)` : ''}
+            <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+              <span style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'left' }}>
+                {uploadProgress || 'Preparing upload...'}{queuedCount > 0 ? ` (${queuedCount} queued)` : ''}
+              </span>
+              <span style={{ fontSize: 10, color: 'rgba(72, 45, 26, 0.52)', textAlign: 'left' }}>
+                New: {sessionUploaded} · Duplicates: {sessionSkipped} · Failed: {sessionFailed}
+              </span>
+              {lastUploadEvent && (
+                <span style={{ fontSize: 10, color: 'rgba(72, 45, 26, 0.52)', textAlign: 'left' }}>
+                  {lastUploadEvent}
+                </span>
+              )}
             </span>
           )}
           <AnimatePresence>
@@ -623,7 +673,15 @@ export default function HomeScreen() {
             className="btn btn-secondary btn-note"
             onClick={handleStopUploads}
             disabled={stoppingUpload}
-            style={{ width: '100%', maxWidth: 360, margin: '8px auto 0', fontSize: 13 }}
+            style={{
+              width: '48%',
+              maxWidth: 172,
+              margin: '8px auto 0',
+              fontSize: 13,
+              color: 'rgba(72, 45, 26, 0.7)',
+              borderColor: 'rgba(113, 72, 39, 0.3)',
+              background: 'linear-gradient(145deg, rgba(247, 235, 214, 0.9), rgba(232, 214, 184, 0.86))',
+            }}
           >
             {stoppingUpload ? 'Stopping...' : 'Stop upload'}
           </button>
