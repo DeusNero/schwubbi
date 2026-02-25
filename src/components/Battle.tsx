@@ -305,7 +305,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
             if (e.key === 'Enter' || e.key === ' ') handleChoice(matchup.left.id)
           }}
         >
-          {(phase !== 'timeout-fall' && phase !== 'chosen') && leftTrailParticles.map((p) => (
+          {phase === 'animate' && leftTrailParticles.map((p) => (
             <motion.div
               key={p.id}
               style={{
@@ -313,7 +313,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
                 left: `${p.x}%`,
                 bottom: p.y,
                 color: TRAIL_LINE,
-                zIndex: 40,
+                zIndex: 1,
                 pointerEvents: 'none',
                 filter: 'drop-shadow(0 1px 0 rgba(255, 236, 207, 0.45))',
               }}
@@ -329,7 +329,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
                 delay: p.delay,
                 repeat: Infinity,
                 ease: 'easeOut',
-                repeatDelay: phase === 'timeout' ? 0 : 0.02,
+                repeatDelay: 0.02,
               }}
             >
               <div style={{ position: 'absolute', inset: -6, borderRadius: 999, background: TRAIL_ACCENT, opacity: 0.48 }} />
@@ -383,7 +383,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
             src={leftUrl}
             alt="Left cat"
             className="polaroid-photo"
-            style={{ position: 'relative', zIndex: 2 }}
+            style={{ position: 'relative', zIndex: 20 }}
             draggable={false}
           />
         </motion.div>
@@ -419,7 +419,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
             if (e.key === 'Enter' || e.key === ' ') handleChoice(matchup.right.id)
           }}
         >
-          {(phase !== 'timeout-fall' && phase !== 'chosen') && rightTrailParticles.map((p) => (
+          {phase === 'animate' && rightTrailParticles.map((p) => (
             <motion.div
               key={p.id}
               style={{
@@ -427,7 +427,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
                 left: `${p.x}%`,
                 bottom: p.y,
                 color: TRAIL_LINE,
-                zIndex: 40,
+                zIndex: 1,
                 pointerEvents: 'none',
                 filter: 'drop-shadow(0 1px 0 rgba(255, 236, 207, 0.45))',
               }}
@@ -443,7 +443,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
                 delay: p.delay,
                 repeat: Infinity,
                 ease: 'easeOut',
-                repeatDelay: phase === 'timeout' ? 0 : 0.02,
+                repeatDelay: 0.02,
               }}
             >
               <div style={{ position: 'absolute', inset: -6, borderRadius: 999, background: TRAIL_ACCENT, opacity: 0.48 }} />
@@ -497,7 +497,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
             src={rightUrl}
             alt="Right cat"
             className="polaroid-photo"
-            style={{ position: 'relative', zIndex: 2 }}
+            style={{ position: 'relative', zIndex: 20 }}
             draggable={false}
           />
         </motion.div>
