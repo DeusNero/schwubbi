@@ -14,6 +14,8 @@
 - When routing from a finished game into another screen, use history replacement for that transition; otherwise mobile native Back can reopen gameplay state unexpectedly.
 - Keep deployment statements strictly consistent with git state; if a user reports behavior that conflicts with expected rollout, verify `git log`/remote status first before giving test instructions.
 - When a user requests a style parity change (e.g., medals on leaderboard and home hero), mirror it across both surfaces explicitly and verify before claiming completion.
+- Preserve critical affordance icons during async states (e.g., keep upload `+` visible while processing) so users know actions remain available.
+- Replace static footer version text with build metadata when users ask for deployment recency; derive it at build time so shipped builds are self-identifying.
 
 ## Code Quality
 - React hook lint rules can fail on synchronous state updates in `useEffect`; scheduling startup work asynchronously (e.g. `setTimeout(..., 0)`) avoids cascading render warnings.

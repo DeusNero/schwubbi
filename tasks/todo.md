@@ -4,6 +4,9 @@
 - [ ] Explore options for picking photos from a specific gallery album (folder-based workaround or native app)
 
 ## Done
+- [x] Keep + affordance visible during active uploads
+- [x] Add stop upload control for active queue
+- [x] Harden bulk uploads with retry and improved failure messaging
 - [x] Add upload transaction history persistence with selected/new/skipped/failed counts and timestamps
 - [x] Display upload history section in Settings
 - [x] Validate upload history changes with lint/build

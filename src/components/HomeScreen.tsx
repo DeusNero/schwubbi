@@ -49,16 +49,29 @@ export default function HomeScreen() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadQueueRef = useRef<UploadQueueItem[]>([])
   const processingQueueRef = useRef(false)
+  const stopRequestedRef = useRef(false)
   const backfillCompletedRef = useRef(false)
   const uploadBatchMetaRef = useRef<Record<string, UploadBatchMeta>>({})
   const defaultHeroSrc = `${import.meta.env.BASE_URL}schwubbi-hero.png`
   const [uploading, setUploading] = useState(false)
+  const [stoppingUpload, setStoppingUpload] = useState(false)
   const [queuedCount, setQueuedCount] = useState(0)
   const [uploadProgress, setUploadProgress] = useState('')
   const [showPaw, setShowPaw] = useState(false)
   const [celebrateUpload, setCelebrateUpload] = useState(false)
   const [heroOptions, setHeroOptions] = useState<HeroOption[]>([{ src: defaultHeroSrc, rank: null }])
   const [heroIdx, setHeroIdx] = useState(0)
+  const buildDate = new Date(import.meta.env.VITE_BUILD_TIME ?? '')
+  const buildLabel = Number.isNaN(buildDate.getTime())
+    ? 'Build time unavailable'
+    : `Built ${buildDate.toLocaleString([], {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })}`
 
   useEffect(() => {
     let isMounted = true
@@ -126,6 +139,26 @@ export default function HomeScreen() {
 
   const activeHero = heroOptions[heroIdx] ?? heroOptions[0]
 
+  const uploadWithRetry = async (
+    id: string,
+    thumbBlob: Blob,
+    fullBlob: Blob,
+    filename: string,
+    contentHash: string
+  ) => {
+    let lastError: unknown = null
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        return await uploadImage(id, thumbBlob, fullBlob, filename, contentHash)
+      } catch (err) {
+        lastError = err
+        if (attempt === 2) break
+        await new Promise((r) => setTimeout(r, 500 * attempt))
+      }
+    }
+    throw lastError
+  }
+
   const drainUploadQueue = useCallback(async () => {
     if (processingQueueRef.current) return
     processingQueueRef.current = true
@@ -152,7 +185,7 @@ export default function HomeScreen() {
         }
       }
 
-      while (uploadQueueRef.current.length > 0) {
+      while (uploadQueueRef.current.length > 0 && !stopRequestedRef.current) {
         const nextItem = uploadQueueRef.current.shift()
         if (!nextItem) break
         const { file, batchId } = nextItem
@@ -187,7 +220,7 @@ export default function HomeScreen() {
           }
 
           const id = crypto.randomUUID()
-          const result = await uploadImage(id, thumbBlob, fullBlob, file.name, contentHash)
+          const result = await uploadWithRetry(id, thumbBlob, fullBlob, file.name, contentHash)
 
           if (result.status === 'duplicate') {
             skipped++
@@ -209,7 +242,7 @@ export default function HomeScreen() {
             batch.failed++
           }
           console.error('Upload failed for', file.name, err)
-          setUploadProgress(`Failed ${failed} · ${uploadQueueRef.current.length} queued`)
+          setUploadProgress(`Failed ${failed} · ${uploadQueueRef.current.length} queued (check connection)`)
           await new Promise((r) => setTimeout(r, 900))
         } finally {
           if (batch) {
@@ -231,7 +264,7 @@ export default function HomeScreen() {
       }
 
       setUploadProgress(
-        `Done! Uploaded ${uploaded}, skipped ${skipped} duplicate${skipped !== 1 ? 's' : ''}${failed > 0 ? `, failed ${failed}` : ''}`
+        `${stopRequestedRef.current ? 'Stopped!' : 'Done!'} Uploaded ${uploaded}, skipped ${skipped} duplicate${skipped !== 1 ? 's' : ''}${failed > 0 ? `, failed ${failed}` : ''}`
       )
       if (uploaded > 0) {
         setShowPaw(true)
@@ -244,10 +277,15 @@ export default function HomeScreen() {
       setUploadProgress('Upload queue hit an error. You can add photos again to retry.')
     } finally {
       processingQueueRef.current = false
+      if (stopRequestedRef.current) {
+        uploadQueueRef.current = []
+      }
       setQueuedCount(uploadQueueRef.current.length)
-      if (uploadQueueRef.current.length > 0) {
+      if (uploadQueueRef.current.length > 0 && !stopRequestedRef.current) {
         void drainUploadQueue()
       } else {
+        setStoppingUpload(false)
+        stopRequestedRef.current = false
         setTimeout(() => {
           if (!processingQueueRef.current && uploadQueueRef.current.length === 0) {
             setUploading(false)
@@ -258,9 +296,20 @@ export default function HomeScreen() {
     }
   }, [])
 
+  const handleStopUploads = useCallback(() => {
+    if (!uploading) return
+    stopRequestedRef.current = true
+    setStoppingUpload(true)
+    uploadQueueRef.current = []
+    setQueuedCount(0)
+    setUploadProgress('Stopping after current photo...')
+  }, [uploading])
+
   const handleUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
+    stopRequestedRef.current = false
+    setStoppingUpload(false)
     const batchId = crypto.randomUUID()
     uploadBatchMetaRef.current[batchId] = {
       id: batchId,
@@ -496,28 +545,26 @@ export default function HomeScreen() {
           onClick={() => fileInputRef.current?.click()}
           style={{ position: 'relative', padding: '10px 14px', width: '100%', maxWidth: 360, margin: '0 auto', justifyContent: 'flex-start', gap: 10 }}
         >
+          <span
+            style={{
+              minWidth: 34,
+              height: 34,
+              display: 'inline-grid',
+              placeItems: 'center',
+              borderRadius: 10,
+              border: '1px solid rgba(113, 72, 39, 0.4)',
+              background: 'linear-gradient(142deg, #ef9a58, #d86f2d)',
+              color: '#fff9ef',
+              fontSize: 22,
+              lineHeight: 1,
+            }}
+          >
+            +
+          </span>
           {!(uploading || uploadProgress) ? (
-            <>
-              <span
-                style={{
-                  minWidth: 34,
-                  height: 34,
-                  display: 'inline-grid',
-                  placeItems: 'center',
-                  borderRadius: 10,
-                  border: '1px solid rgba(113, 72, 39, 0.4)',
-                  background: 'linear-gradient(142deg, #ef9a58, #d86f2d)',
-                  color: '#fff9ef',
-                  fontSize: 22,
-                  lineHeight: 1,
-                }}
-              >
-                +
-              </span>
-              <span style={{ fontSize: 13, textAlign: 'left' }}>
-                Photo Here
-              </span>
-            </>
+            <span style={{ fontSize: 13, textAlign: 'left' }}>
+              Photo Here
+            </span>
           ) : (
             <span style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'left' }}>
               {uploadProgress || 'Preparing upload...'}{queuedCount > 0 ? ` (${queuedCount} queued)` : ''}
@@ -536,10 +583,21 @@ export default function HomeScreen() {
             )}
           </AnimatePresence>
         </motion.button>
+        {uploading && (
+          <button
+            type="button"
+            className="btn btn-secondary btn-note"
+            onClick={handleStopUploads}
+            disabled={stoppingUpload}
+            style={{ width: '100%', maxWidth: 360, margin: '8px auto 0', fontSize: 13 }}
+          >
+            {stoppingUpload ? 'Stopping...' : 'Stop upload'}
+          </button>
+        )}
       </motion.div>
 
       <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center', fontSize: 11, color: 'rgba(64,40,24,0.33)' }}>
-        v1.2.0
+        {buildLabel}
       </div>
     </div>
   )

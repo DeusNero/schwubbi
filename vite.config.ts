@@ -2,8 +2,11 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+export default defineConfig(() => ({
   base: '/schwubbi/',
+  define: {
+    'import.meta.env.VITE_BUILD_TIME': JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     VitePWA({
@@ -24,4 +27,4 @@ export default defineConfig({
       },
     }),
   ],
-})
+}))
