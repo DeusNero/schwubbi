@@ -337,7 +337,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
           style={{ width: cardWidth, transform: 'rotate(-2.8deg)', cursor: 'pointer', overflow: 'visible', ...getChosenStyle(matchup.left.id) }}
           animate={
             phase === 'timeout'
-              ? { x: -spreadX, y: 0, rotate: [-8, 2, -7, 3, -8] }
+              ? { x: -spreadX, y: 0, scale: 1.3, rotate: [-8, 2, -7, 3, -8] }
               : phase === 'timeout-fall'
                 ? { x: -spreadX * 0.4, y: vh * 0.72, rotate: -18, opacity: 0.15 }
               : phase === 'chosen'
@@ -431,7 +431,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
           style={{ width: cardWidth, transform: 'rotate(2.2deg)', cursor: 'pointer', overflow: 'visible', ...getChosenStyle(matchup.right.id) }}
           animate={
             phase === 'timeout'
-              ? { x: spreadX, y: 0, rotate: [8, -2, 7, -3, 8] }
+              ? { x: spreadX, y: 0, scale: 1.3, rotate: [8, -2, 7, -3, 8] }
               : phase === 'timeout-fall'
                 ? { x: spreadX * 0.4, y: vh * 0.74, rotate: 20, opacity: 0.15 }
               : phase === 'chosen'
