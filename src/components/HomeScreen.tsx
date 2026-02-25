@@ -1,17 +1,92 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { uploadImage } from '../lib/supabase'
+import { uploadImage, getThumbUrl } from '../lib/supabase'
 import imageCompression from 'browser-image-compression'
 import { LeaderboardSketchIcon } from './icons/SketchIcons'
+import { getAllElos } from '../lib/storage'
+
+interface HeroOption {
+  src: string
+  rank: number | null
+}
 
 export default function HomeScreen() {
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const defaultHeroSrc = `${import.meta.env.BASE_URL}schwubbi-hero.png`
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState('')
   const [showPaw, setShowPaw] = useState(false)
   const [celebrateUpload, setCelebrateUpload] = useState(false)
+  const [heroOptions, setHeroOptions] = useState<HeroOption[]>([{ src: defaultHeroSrc, rank: null }])
+  const [heroIdx, setHeroIdx] = useState(0)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadHeroOptions = async () => {
+      try {
+        const all = await getAllElos()
+        if (!isMounted) return
+
+        const topThree = all
+          .filter((entry) => entry.matchups > 0)
+          .sort((a, b) => b.elo - a.elo)
+          .slice(0, 3)
+
+        if (topThree.length === 0) {
+          setHeroOptions([{ src: defaultHeroSrc, rank: null }])
+          setHeroIdx(0)
+          return
+        }
+
+        const options: HeroOption[] = topThree.map((entry, i) => {
+          const thumbSrc = getThumbUrl(entry.imageId)
+          return {
+            src: thumbSrc || defaultHeroSrc,
+            rank: i + 1,
+          }
+        })
+
+        setHeroOptions(options)
+        setHeroIdx(0)
+      } catch (err) {
+        console.warn('Failed to load hero choices', err)
+        if (!isMounted) return
+        setHeroOptions([{ src: defaultHeroSrc, rank: null }])
+        setHeroIdx(0)
+      }
+    }
+
+    const refreshOnVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void loadHeroOptions()
+      }
+    }
+
+    void loadHeroOptions()
+    window.addEventListener('focus', refreshOnVisible)
+    document.addEventListener('visibilitychange', refreshOnVisible)
+
+    return () => {
+      isMounted = false
+      window.removeEventListener('focus', refreshOnVisible)
+      document.removeEventListener('visibilitychange', refreshOnVisible)
+    }
+  }, [defaultHeroSrc])
+
+  const showPreviousHero = useCallback(() => {
+    if (heroOptions.length <= 1) return
+    setHeroIdx((i) => (i - 1 + heroOptions.length) % heroOptions.length)
+  }, [heroOptions.length])
+
+  const showNextHero = useCallback(() => {
+    if (heroOptions.length <= 1) return
+    setHeroIdx((i) => (i + 1) % heroOptions.length)
+  }, [heroOptions.length])
+
+  const activeHero = heroOptions[heroIdx] ?? heroOptions[0]
 
   const handleUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -86,35 +161,107 @@ export default function HomeScreen() {
         className="paper-card"
         style={{ textAlign: 'center', maxWidth: 320 }}
       >
-        <div style={{ position: 'relative', display: 'inline-grid', placeItems: 'center', marginBottom: 10 }}>
-          {celebrateUpload && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.6, rotate: 0 }}
-              animate={{ opacity: [0, 0.9, 0], scale: [0.6, 1.08, 1.2], rotate: [0, 18, 36] }}
-              transition={{ duration: 1.1 }}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <button
+              type="button"
+              onClick={showPreviousHero}
+              disabled={heroOptions.length <= 1}
+              aria-label="Show previous leaderboard image"
               style={{
-                position: 'absolute',
-                width: 126,
-                height: 126,
+                width: 28,
+                height: 28,
                 borderRadius: '50%',
-                border: '2px dashed rgba(223, 122, 55, 0.52)',
+                border: '1px solid rgba(113, 72, 39, 0.32)',
+                color: 'var(--text-dim)',
+                background: 'rgba(255, 248, 236, 0.65)',
+                cursor: heroOptions.length <= 1 ? 'default' : 'pointer',
+                opacity: heroOptions.length <= 1 ? 0.4 : 0.82,
               }}
-            />
+            >
+              ‹
+            </button>
+            <div style={{ position: 'relative', display: 'inline-grid', placeItems: 'center' }}>
+              {celebrateUpload && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.6, rotate: 0 }}
+                  animate={{ opacity: [0, 0.9, 0], scale: [0.6, 1.08, 1.2], rotate: [0, 18, 36] }}
+                  transition={{ duration: 1.1 }}
+                  style={{
+                    position: 'absolute',
+                    width: 126,
+                    height: 126,
+                    borderRadius: '50%',
+                    border: '2px dashed rgba(223, 122, 55, 0.52)',
+                  }}
+                />
+              )}
+              <motion.img
+                key={`${activeHero.src}-${activeHero.rank ?? 'default'}`}
+                src={activeHero.src}
+                alt={activeHero.rank ? `Leaderboard rank ${activeHero.rank}` : 'Schwubbi'}
+                animate={celebrateUpload ? { rotate: [0, -2.5, 2.5, -1.4, 1.4, 0] } : { rotate: 0 }}
+                transition={{ duration: 0.7 }}
+                drag={heroOptions.length > 1 ? 'x' : false}
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.2}
+                onDragEnd={(_, info) => {
+                  if (info.offset.x > 32) showPreviousHero()
+                  if (info.offset.x < -32) showNextHero()
+                }}
+                style={{
+                  width: 96,
+                  height: 96,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '3px solid rgba(98, 62, 32, 0.32)',
+                  boxShadow: '0 8px 22px rgba(78, 46, 21, 0.2)',
+                }}
+              />
+              {activeHero.rank && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    right: -2,
+                    bottom: -2,
+                    fontSize: 10,
+                    lineHeight: 1,
+                    padding: '3px 5px',
+                    borderRadius: 8,
+                    border: '1px solid rgba(113, 72, 39, 0.3)',
+                    background: 'rgba(255, 245, 228, 0.92)',
+                    color: 'var(--text-dim)',
+                    fontWeight: 700,
+                  }}
+                >
+                  #{activeHero.rank}
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={showNextHero}
+              disabled={heroOptions.length <= 1}
+              aria-label="Show next leaderboard image"
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                border: '1px solid rgba(113, 72, 39, 0.32)',
+                color: 'var(--text-dim)',
+                background: 'rgba(255, 248, 236, 0.65)',
+                cursor: heroOptions.length <= 1 ? 'default' : 'pointer',
+                opacity: heroOptions.length <= 1 ? 0.4 : 0.82,
+              }}
+            >
+              ›
+            </button>
+          </div>
+          {heroOptions.length > 1 && (
+            <div style={{ marginTop: 6, fontSize: 10, color: 'rgba(72, 45, 26, 0.58)' }}>
+              Swipe image or tap arrows
+            </div>
           )}
-          <motion.img
-            src={`${import.meta.env.BASE_URL}schwubbi-hero.png`}
-            alt="Schwubbi"
-            animate={celebrateUpload ? { rotate: [0, -2.5, 2.5, -1.4, 1.4, 0] } : { rotate: 0 }}
-            transition={{ duration: 0.7 }}
-            style={{
-              width: 96,
-              height: 96,
-              borderRadius: '50%',
-              objectFit: 'cover',
-              border: '3px solid rgba(98, 62, 32, 0.32)',
-              boxShadow: '0 8px 22px rgba(78, 46, 21, 0.2)',
-            }}
-          />
         </div>
         <h1 style={{ fontSize: 30, fontWeight: 800, marginBottom: 6, letterSpacing: 0.4 }}>
           Schwubbi Tournament
@@ -131,26 +278,47 @@ export default function HomeScreen() {
         style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 280 }}
       >
         <button className="btn btn-primary btn-note" onClick={() => navigate('/play')} style={{ width: '100%' }}>
-          <motion.svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            animate={{ rotate: 360 }}
-            transition={{ repeat: Infinity, duration: 1.4, ease: 'linear' }}
-            style={{ display: 'inline-block', marginRight: 2 }}
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="8.25" fill="#f6c6d8" stroke="#c86e98" strokeWidth="1.4" />
-            <path
-              d="M6.8 12.3c1.4-1.2 2.6-1.7 4.1-1.7 1.8 0 3.2.8 5.2 2.8M7.8 9.4c1.9-1.2 3.5-1.3 5.3-.5m-4.5 7c1.8-.7 3.4-.5 5.6.7"
-              stroke="#ad4f7e"
-              strokeLinecap="round"
-              strokeWidth="1.35"
-            />
-            <path d="M18.6 7.8l2.3-1.7" stroke="#ad4f7e" strokeLinecap="round" strokeWidth="1.35" />
-          </motion.svg>
-          Play
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, position: 'relative' }}>
+            <motion.svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+              style={{ display: 'inline-block' }}
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="8.25" fill="#f7c7db" stroke="#c86e98" strokeWidth="1.4" />
+              <path
+                d="M6.8 12.3c1.4-1.2 2.6-1.7 4.1-1.7 1.8 0 3.2.8 5.2 2.8M7.8 9.4c1.9-1.2 3.5-1.3 5.3-.5m-4.5 7c1.8-.7 3.4-.5 5.6.7"
+                stroke="#ad4f7e"
+                strokeLinecap="round"
+                strokeWidth="1.35"
+              />
+              <path d="M18.6 7.8l2.3-1.7" stroke="#ad4f7e" strokeLinecap="round" strokeWidth="1.35" />
+            </motion.svg>
+            <span style={{ position: 'relative', display: 'inline-block', paddingBottom: 2 }}>
+              Play
+              <motion.svg
+                width="46"
+                height="12"
+                viewBox="0 0 46 12"
+                fill="none"
+                aria-hidden="true"
+                style={{ position: 'absolute', left: -2, bottom: -8, pointerEvents: 'none' }}
+              >
+                <motion.path
+                  d="M2 7 C 12 10, 24 2, 44 7"
+                  stroke="#c86e98"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  animate={{ pathLength: [0.45, 1, 0.45], x: [-1, 1.5, -1] }}
+                  transition={{ repeat: Infinity, duration: 1.9, ease: 'easeInOut' }}
+                />
+              </motion.svg>
+            </span>
+          </span>
         </button>
 
         <button className="btn btn-secondary btn-note" onClick={() => navigate('/leaderboard')} style={{ width: '100%' }}>

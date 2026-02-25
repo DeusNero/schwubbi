@@ -10,6 +10,7 @@
 
 ## UX
 - Raw ELO numbers are meaningless to users. Keep ELO internally for matchmaking, show rank + win rate + W/L instead
+- If an icon gets too stylized, users stop recognizing it; preserve clear silhouette/readability first, then layer in sketch texture.
 
 ## Code Quality
 - React hook lint rules can fail on synchronous state updates in `useEffect`; scheduling startup work asynchronously (e.g. `setTimeout(..., 0)`) avoids cascading render warnings.
