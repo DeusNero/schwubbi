@@ -57,8 +57,26 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const matchupIdRef = useRef(`${matchup.left.id}-${matchup.right.id}`)
   const endedRef = useRef(false)
+  const lastResultRef = useRef(onResult)
+
+  useEffect(() => {
+    lastResultRef.current = onResult
+  }, [onResult])
+
+  const forceEndMatch = useCallback(() => {
+    if (endedRef.current || phase === 'chosen' || phase === 'timeout-fall') return
+    endedRef.current = true
+    if (timerRef.current) clearTimeout(timerRef.current)
+    if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current)
+    if (countdownRef.current) clearInterval(countdownRef.current)
+    if (watchdogRef.current) clearInterval(watchdogRef.current)
+    setPhase('timeout-fall')
+    setChosenId(null)
+    setTimeout(() => lastResultRef.current(null), 120)
+  }, [phase])
 
   useEffect(() => {
     endedRef.current = false
@@ -70,6 +88,10 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
     playLaunch()
 
     countdownRef.current = setInterval(() => {
+      if (document.visibilityState !== 'visible' || !document.hasFocus()) {
+        forceEndMatch()
+        return
+      }
       setTimeLeft(prev => {
         const next = prev <= 1 ? 0 : prev - 1
         if (next <= TIMEOUT_EXTRA && next > 0) {
@@ -80,8 +102,16 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
     }, 1000)
 
     timerRef.current = setTimeout(() => {
+      if (document.visibilityState !== 'visible' || !document.hasFocus()) {
+        forceEndMatch()
+        return
+      }
       setPhase('timeout')
       timeoutTimerRef.current = setTimeout(() => {
+        if (document.visibilityState !== 'visible' || !document.hasFocus()) {
+          forceEndMatch()
+          return
+        }
         if (countdownRef.current) clearInterval(countdownRef.current)
         setPhase('timeout-fall')
         setChosenId(null)
@@ -94,33 +124,32 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
       if (timerRef.current) clearTimeout(timerRef.current)
       if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current)
       if (countdownRef.current) clearInterval(countdownRef.current)
+      if (watchdogRef.current) clearInterval(watchdogRef.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchup.left.id, matchup.right.id])
 
   useEffect(() => {
     const endMatchIfBackgrounded = () => {
-      if (document.visibilityState === 'visible' && document.hasFocus()) return
-      if (endedRef.current || phase === 'chosen' || phase === 'timeout-fall') return
-      endedRef.current = true
-      if (timerRef.current) clearTimeout(timerRef.current)
-      if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current)
-      if (countdownRef.current) clearInterval(countdownRef.current)
-      setPhase('timeout-fall')
-      setChosenId(null)
-      setTimeout(() => onResult(null), 150)
+      if (document.visibilityState !== 'visible' || !document.hasFocus()) {
+        forceEndMatch()
+      }
     }
 
     document.addEventListener('visibilitychange', endMatchIfBackgrounded)
     window.addEventListener('blur', endMatchIfBackgrounded)
     window.addEventListener('pagehide', endMatchIfBackgrounded)
+    window.addEventListener('freeze', endMatchIfBackgrounded as EventListener)
+    watchdogRef.current = setInterval(endMatchIfBackgrounded, 250)
 
     return () => {
       document.removeEventListener('visibilitychange', endMatchIfBackgrounded)
       window.removeEventListener('blur', endMatchIfBackgrounded)
       window.removeEventListener('pagehide', endMatchIfBackgrounded)
+      window.removeEventListener('freeze', endMatchIfBackgrounded as EventListener)
+      if (watchdogRef.current) clearInterval(watchdogRef.current)
     }
-  }, [onResult, phase])
+  }, [forceEndMatch])
 
   const handleChoice = useCallback(
     (id: string) => {
