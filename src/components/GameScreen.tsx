@@ -30,6 +30,10 @@ export default function GameScreen() {
   const [allImages, setAllImages] = useState<ImageRecord[]>([])
   const cloudHydratedRef = useRef(false)
 
+  const isAppHidden = () =>
+    typeof document !== 'undefined' &&
+    (document.visibilityState !== 'visible' || !document.hasFocus())
+
   const syncCloudSnapshot = useCallback(async () => {
     try {
       const snapshot = await getAllElos()
@@ -98,8 +102,29 @@ export default function GameScreen() {
     return () => window.clearTimeout(id)
   }, [startTournament])
 
+  useEffect(() => {
+    const handleHidden = () => {
+      if (isAppHidden()) {
+        navigate('/')
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleHidden)
+    window.addEventListener('blur', handleHidden)
+    window.addEventListener('pagehide', handleHidden)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleHidden)
+      window.removeEventListener('blur', handleHidden)
+      window.removeEventListener('pagehide', handleHidden)
+    }
+  }, [navigate])
+
   const handleResult = useCallback(
     async (winId: string | null) => {
+      if (isAppHidden()) {
+        return
+      }
       const currentMatchup = matchups[currentIdx]
 
       if (!winId) {

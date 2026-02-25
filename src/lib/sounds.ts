@@ -1,9 +1,14 @@
 let audioCtx: AudioContext | null = null
 let tapVariant = 0
 
+function canPlaySound(): boolean {
+  if (typeof document === 'undefined') return true
+  return document.visibilityState === 'visible' && document.hasFocus()
+}
+
 function getCtx(): AudioContext {
   if (!audioCtx) audioCtx = new AudioContext()
-  if (audioCtx.state === 'suspended') {
+  if (audioCtx.state === 'suspended' && canPlaySound()) {
     void audioCtx.resume()
   }
   return audioCtx
@@ -37,6 +42,7 @@ function playFilteredNoise(ctx: AudioContext, opts: { start: number; duration: n
 }
 
 export function playLaunch() {
+  if (!canPlaySound()) return
   const ctx = getCtx()
   const t = ctx.currentTime
   playFilteredNoise(ctx, { start: t, duration: 0.2, frequency: 760, gain: 0.08, q: 0.8 })
@@ -55,6 +61,7 @@ export function playLaunch() {
 }
 
 export function playTap() {
+  if (!canPlaySound()) return
   const ctx = getCtx()
   const t = ctx.currentTime
   const variant = tapVariant % 3
@@ -110,6 +117,7 @@ export function playTap() {
 }
 
 export function playElimination() {
+  if (!canPlaySound()) return
   const ctx = getCtx()
   const t = ctx.currentTime
   playFilteredNoise(ctx, { start: t, duration: 0.2, frequency: 500, gain: 0.045 })
@@ -127,6 +135,7 @@ export function playElimination() {
 }
 
 export function playCountdownReminder(second: number) {
+  if (!canPlaySound()) return
   const ctx = getCtx()
   const t = ctx.currentTime
   const osc = ctx.createOscillator()
@@ -144,6 +153,7 @@ export function playCountdownReminder(second: number) {
 }
 
 export function playSurprisedMeow() {
+  if (!canPlaySound()) return
   const ctx = getCtx()
   const t = ctx.currentTime
   const osc = ctx.createOscillator()
@@ -162,6 +172,7 @@ export function playSurprisedMeow() {
 }
 
 export function playFinale() {
+  if (!canPlaySound()) return
   const ctx = getCtx()
   const notes = [523, 659, 784, 1047]
   notes.forEach((freq, i) => {

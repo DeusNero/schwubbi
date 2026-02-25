@@ -85,7 +85,9 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
     setChosenId(null)
     setTimeLeft(TOTAL_TIME)
 
-    playLaunch()
+    if (document.visibilityState === 'visible' && document.hasFocus()) {
+      playLaunch()
+    }
 
     countdownRef.current = setInterval(() => {
       if (document.visibilityState !== 'visible' || !document.hasFocus()) {
