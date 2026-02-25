@@ -169,31 +169,34 @@ export default function HomeScreen() {
           transition={{ duration: 0.7 }}
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          style={{ position: 'relative', padding: '10px 14px', width: '100%', maxWidth: 360, margin: '0 auto', justifyContent: 'space-between' }}
+          style={{ position: 'relative', padding: '10px 14px', width: '100%', maxWidth: 360, margin: '0 auto', justifyContent: 'flex-start', gap: 10 }}
         >
-          {!uploading && (
-            <span
-              style={{
-                minWidth: 34,
-                height: 34,
-                display: 'inline-grid',
-                placeItems: 'center',
-                borderRadius: 10,
-                border: '1px solid rgba(113, 72, 39, 0.4)',
-                background: 'linear-gradient(142deg, #ef9a58, #d86f2d)',
-                color: '#fff9ef',
-                fontSize: 22,
-                lineHeight: 1,
-              }}
-            >
-              +
+          {!(uploading || uploadProgress) ? (
+            <>
+              <span
+                style={{
+                  minWidth: 34,
+                  height: 34,
+                  display: 'inline-grid',
+                  placeItems: 'center',
+                  borderRadius: 10,
+                  border: '1px solid rgba(113, 72, 39, 0.4)',
+                  background: 'linear-gradient(142deg, #ef9a58, #d86f2d)',
+                  color: '#fff9ef',
+                  fontSize: 22,
+                  lineHeight: 1,
+                }}
+              >
+                +
+              </span>
+              <span style={{ fontSize: 13, textAlign: 'left' }}>
+                Photo Here
+              </span>
+            </>
+          ) : (
+            <span style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'left' }}>
+              {uploadProgress || 'Preparing upload...'}
             </span>
-          )}
-          <span style={{ fontSize: 13, opacity: uploading || uploadProgress ? 0 : 1, textAlign: 'left' }}>
-            Photo Here
-          </span>
-          {(uploading || uploadProgress) && (
-            <span style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'left' }}>{uploadProgress || 'Preparing upload...'}</span>
           )}
           <AnimatePresence>
             {showPaw && (

@@ -58,8 +58,10 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
   const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const matchupIdRef = useRef(`${matchup.left.id}-${matchup.right.id}`)
+  const endedRef = useRef(false)
 
   useEffect(() => {
+    endedRef.current = false
     matchupIdRef.current = `${matchup.left.id}-${matchup.right.id}`
     setPhase('animate')
     setChosenId(null)
@@ -95,6 +97,30 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchup.left.id, matchup.right.id])
+
+  useEffect(() => {
+    const endMatchIfBackgrounded = () => {
+      if (document.visibilityState === 'visible' && document.hasFocus()) return
+      if (endedRef.current || phase === 'chosen' || phase === 'timeout-fall') return
+      endedRef.current = true
+      if (timerRef.current) clearTimeout(timerRef.current)
+      if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current)
+      if (countdownRef.current) clearInterval(countdownRef.current)
+      setPhase('timeout-fall')
+      setChosenId(null)
+      setTimeout(() => onResult(null), 150)
+    }
+
+    document.addEventListener('visibilitychange', endMatchIfBackgrounded)
+    window.addEventListener('blur', endMatchIfBackgrounded)
+    window.addEventListener('pagehide', endMatchIfBackgrounded)
+
+    return () => {
+      document.removeEventListener('visibilitychange', endMatchIfBackgrounded)
+      window.removeEventListener('blur', endMatchIfBackgrounded)
+      window.removeEventListener('pagehide', endMatchIfBackgrounded)
+    }
+  }, [onResult, phase])
 
   const handleChoice = useCallback(
     (id: string) => {
@@ -179,7 +205,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
       })),
     []
   )
-  const trailDuration = phase === 'timeout' ? 0.5 : 0.95
+  const trailDuration = 0.95
 
   const renderTrailIcon = (kind: TrailKind, size: number) => {
     const iconStyle: React.CSSProperties = { width: size, height: size, strokeWidth: 2.3 }
@@ -305,7 +331,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
             if (e.key === 'Enter' || e.key === ' ') handleChoice(matchup.left.id)
           }}
         >
-          {phase === 'animate' && leftTrailParticles.map((p) => (
+          {(phase === 'animate' || phase === 'timeout-fall') && leftTrailParticles.map((p) => (
             <motion.div
               key={p.id}
               style={{
@@ -319,45 +345,25 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
               }}
               animate={{
                 x: [0, p.drift],
-                y: [0, -86 - (p.size * 1.35)],
+                y: phase === 'animate'
+                  ? [0, 60 + (p.size * 1.05)]
+                  : [0, -70 - (p.size * 1.25)],
                 rotate: [0, p.spin],
                 opacity: [0.95, 0.7, 0],
                 scale: [0.78, 1.02, 1.12],
               }}
               transition={{
-                duration: trailDuration,
+                duration: phase === 'animate' ? trailDuration : 0.55,
                 delay: p.delay,
-                repeat: Infinity,
+                repeat: phase === 'animate' ? Infinity : 0,
                 ease: 'easeOut',
-                repeatDelay: 0.02,
+                repeatDelay: phase === 'animate' ? 0.02 : 0,
               }}
             >
               <div style={{ position: 'absolute', inset: -6, borderRadius: 999, background: TRAIL_ACCENT, opacity: 0.48 }} />
               {renderTrailIcon(p.kind, p.size)}
             </motion.div>
           ))}
-          {phase === 'timeout' && (
-            <motion.div
-              style={{ position: 'absolute', inset: -18, zIndex: 45, pointerEvents: 'none' }}
-              animate={{ rotate: 360 }}
-              transition={{ duration: 0.72, ease: 'linear', repeat: Infinity }}
-            >
-              {burstParticles.map((p) => (
-                <div
-                  key={`left-swirl-${p.id}`}
-                  style={{
-                    position: 'absolute',
-                    left: `calc(50% + ${Math.cos(p.angle) * 66}px)`,
-                    top: `calc(45% + ${Math.sin(p.angle) * 66}px)`,
-                    color: TRAIL_LINE,
-                    opacity: 0.82,
-                  }}
-                >
-                  {renderTrailIcon(p.kind, 22)}
-                </div>
-              ))}
-            </motion.div>
-          )}
           {phase === 'chosen' && chosenId === matchup.left.id && (
             <div style={{ position: 'absolute', inset: -34, zIndex: 50, pointerEvents: 'none' }}>
               {burstParticles.map((p, idx) => (
@@ -419,7 +425,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
             if (e.key === 'Enter' || e.key === ' ') handleChoice(matchup.right.id)
           }}
         >
-          {phase === 'animate' && rightTrailParticles.map((p) => (
+          {(phase === 'animate' || phase === 'timeout-fall') && rightTrailParticles.map((p) => (
             <motion.div
               key={p.id}
               style={{
@@ -433,45 +439,25 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
               }}
               animate={{
                 x: [0, p.drift],
-                y: [0, -86 - (p.size * 1.35)],
+                y: phase === 'animate'
+                  ? [0, 60 + (p.size * 1.05)]
+                  : [0, -70 - (p.size * 1.25)],
                 rotate: [0, p.spin],
                 opacity: [0.95, 0.7, 0],
                 scale: [0.78, 1.02, 1.12],
               }}
               transition={{
-                duration: trailDuration,
+                duration: phase === 'animate' ? trailDuration : 0.55,
                 delay: p.delay,
-                repeat: Infinity,
+                repeat: phase === 'animate' ? Infinity : 0,
                 ease: 'easeOut',
-                repeatDelay: 0.02,
+                repeatDelay: phase === 'animate' ? 0.02 : 0,
               }}
             >
               <div style={{ position: 'absolute', inset: -6, borderRadius: 999, background: TRAIL_ACCENT, opacity: 0.48 }} />
               {renderTrailIcon(p.kind, p.size)}
             </motion.div>
           ))}
-          {phase === 'timeout' && (
-            <motion.div
-              style={{ position: 'absolute', inset: -18, zIndex: 45, pointerEvents: 'none' }}
-              animate={{ rotate: -360 }}
-              transition={{ duration: 0.68, ease: 'linear', repeat: Infinity }}
-            >
-              {burstParticles.map((p) => (
-                <div
-                  key={`right-swirl-${p.id}`}
-                  style={{
-                    position: 'absolute',
-                    left: `calc(50% + ${Math.cos(p.angle) * 66}px)`,
-                    top: `calc(45% + ${Math.sin(p.angle) * 66}px)`,
-                    color: TRAIL_LINE,
-                    opacity: 0.82,
-                  }}
-                >
-                  {renderTrailIcon(p.kind, 22)}
-                </div>
-              ))}
-            </motion.div>
-          )}
           {phase === 'chosen' && chosenId === matchup.right.id && (
             <div style={{ position: 'absolute', inset: -34, zIndex: 50, pointerEvents: 'none' }}>
               {burstParticles.map((p, idx) => (
