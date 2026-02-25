@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&display=swap');
+
 *,
 *::before,
 *::after {
@@ -22,7 +24,7 @@
   --radius: 16px;
   --radius-note: 14px;
 
-  font-family: 'Trebuchet MS', 'Avenir Next', 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Architects Daughter', 'Trebuchet MS', 'Avenir Next', 'Segoe UI', Roboto, sans-serif;
   color: var(--text);
   background:
     radial-gradient(circle at 18% 12%, rgba(255, 244, 224, 0.26) 0%, transparent 42%),
@@ -40,6 +42,15 @@ body,
   width: 100%;
   overflow: hidden;
   touch-action: manipulation;
+}
+
+body {
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+}
+
+h1, h2, h3 {
+  letter-spacing: 0.03em;
 }
 
 button {
@@ -190,4 +201,110 @@ button {
   border-radius: 17px 19px 15px 20px;
   padding: 0;
   font-size: 24px;
+}
+
+.yarn-timer {
+  position: relative;
+  width: min(86vw, 360px);
+  height: 18px;
+  border-radius: 999px;
+  border: 1px dashed rgba(107, 67, 34, 0.42);
+  background: rgba(248, 236, 212, 0.56);
+  overflow: hidden;
+}
+
+.yarn-timer-thread {
+  height: 100%;
+  border-radius: inherit;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(208, 119, 54, 0.96) 0px,
+      rgba(208, 119, 54, 0.96) 6px,
+      rgba(230, 160, 103, 0.96) 6px,
+      rgba(230, 160, 103, 0.96) 11px
+    );
+  box-shadow: inset 0 0 3px rgba(130, 64, 22, 0.4);
+}
+
+.yarn-ball {
+  position: absolute;
+  top: 50%;
+  right: -1px;
+  transform: translate(50%, -50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(124, 70, 29, 0.55);
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 242, 223, 0.8), transparent 45%),
+    repeating-radial-gradient(
+      circle at 42% 48%,
+      rgba(222, 131, 64, 0.98) 0px,
+      rgba(222, 131, 64, 0.98) 2px,
+      rgba(237, 164, 111, 0.95) 2px,
+      rgba(237, 164, 111, 0.95) 4px
+    );
+  box-shadow: 0 3px 8px rgba(94, 54, 23, 0.3);
+}
+
+.polaroid-card {
+  width: clamp(150px, 39vw, 228px);
+  background: linear-gradient(160deg, rgba(255, 255, 252, 0.95), rgba(244, 232, 212, 0.92));
+  border-radius: 8px 12px 8px 11px;
+  border: 1px solid rgba(124, 83, 51, 0.28);
+  padding: 8px 8px 20px;
+  box-shadow: 0 10px 26px rgba(71, 42, 21, 0.25);
+  position: relative;
+}
+
+.polaroid-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  clip-path: polygon(2% 1%, 98% 2%, 99% 18%, 98% 98%, 5% 99%, 1% 95%, 1% 10%);
+  border: 1px dashed rgba(125, 88, 50, 0.2);
+  pointer-events: none;
+}
+
+.polaroid-photo {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 2px solid rgba(146, 106, 75, 0.25);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.album-slot {
+  width: min(76vw, 280px);
+  min-height: 68px;
+  border-radius: 12px;
+  border: 2px dashed rgba(113, 72, 39, 0.36);
+  background:
+    linear-gradient(165deg, rgba(249, 238, 218, 0.72), rgba(234, 212, 179, 0.68));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(91, 58, 32, 0.45);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: inset 0 2px 6px rgba(108, 72, 38, 0.14);
+}
+
+.paw-pop {
+  position: absolute;
+  right: -10px;
+  top: -10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(222, 120, 58, 0.92);
+  color: #fff7eb;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  box-shadow: 0 4px 10px rgba(98, 54, 22, 0.34);
 }

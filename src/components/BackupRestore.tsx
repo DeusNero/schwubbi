@@ -115,6 +115,10 @@ export default function BackupRestore() {
         animate={{ opacity: 1, y: 0 }}
         className="paper-card"
       >
+        <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>
+          Leaderboards now sync to cloud per device identity. If browser site data gets fully deleted,
+          this backup code is still the safest manual recovery path.
+        </p>
         <h3 style={{ fontSize: 16, marginBottom: 8 }}>Create Backup</h3>
         <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 16 }}>
           Save your rankings to the cloud. You'll get a short code to restore on any device.

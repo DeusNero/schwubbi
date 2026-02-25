@@ -57,6 +57,12 @@ export async function importAllElos(
   }
 }
 
+export async function upsertAllElos(entries: EloEntry[]): Promise<void> {
+  for (const entry of entries) {
+    await setElo(entry)
+  }
+}
+
 export async function getBackupCode(): Promise<string | null> {
   return (await get<string>(BACKUP_META_KEY)) ?? null
 }

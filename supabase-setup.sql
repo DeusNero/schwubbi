@@ -50,3 +50,30 @@ CREATE POLICY "Anyone can upsert backups" ON public.backups FOR INSERT
 
 CREATE POLICY "Anyone can update backups" ON public.backups FOR UPDATE
   USING (true);
+
+-- 5. Create per-user leaderboard table (cloud persistence)
+CREATE TABLE public.leaderboards (
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  image_id uuid NOT NULL,
+  elo integer NOT NULL DEFAULT 1500,
+  wins integer NOT NULL DEFAULT 0,
+  losses integer NOT NULL DEFAULT 0,
+  matchups integer NOT NULL DEFAULT 0,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, image_id)
+);
+
+CREATE INDEX leaderboards_user_rank_idx
+  ON public.leaderboards (user_id, elo DESC, updated_at DESC);
+
+ALTER TABLE public.leaderboards ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own leaderboard" ON public.leaderboards FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own leaderboard" ON public.leaderboards FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own leaderboard" ON public.leaderboards FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);

@@ -14,6 +14,7 @@
 ## Code Quality
 - React hook lint rules can fail on synchronous state updates in `useEffect`; scheduling startup work asynchronously (e.g. `setTimeout(..., 0)`) avoids cascading render warnings.
 - For `useCallback`, keep dependency arrays aligned with inferred dependencies (`allImages`, `startTournament`, etc.) to avoid preserve-manual-memoization errors.
+- When `vite.config.ts` uses a subpath `base` (like `/schwubbi/`), local preview may show only background if Router basename is forced to that subpath on `localhost/`; resolve basename dynamically based on current path.
 
 ## CRITICAL — Shared Origin
 - Multiple apps on the same GitHub Pages domain (deusnero.github.io) share the SAME origin. Service workers, caches, and localStorage are all shared.

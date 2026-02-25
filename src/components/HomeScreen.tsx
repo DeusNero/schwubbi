@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { uploadImage } from '../lib/supabase'
 import imageCompression from 'browser-image-compression'
 import { BackupSketchIcon, LeaderboardSketchIcon } from './icons/SketchIcons'
@@ -10,6 +10,8 @@ export default function HomeScreen() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState('')
+  const [showPaw, setShowPaw] = useState(false)
+  const [celebrateUpload, setCelebrateUpload] = useState(false)
 
   const handleUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -49,6 +51,12 @@ export default function HomeScreen() {
     }
 
     setUploadProgress(`Done! ${done} photo${done !== 1 ? 's' : ''} added`)
+    if (done > 0) {
+      setShowPaw(true)
+      setCelebrateUpload(true)
+      setTimeout(() => setShowPaw(false), 1200)
+      setTimeout(() => setCelebrateUpload(false), 1400)
+    }
     setTimeout(() => {
       setUploading(false)
       setUploadProgress('')
@@ -66,19 +74,36 @@ export default function HomeScreen() {
         className="paper-card"
         style={{ textAlign: 'center', maxWidth: 320 }}
       >
-        <img
-          src={`${import.meta.env.BASE_URL}schwubbi-hero.png`}
-          alt="Schwubbi"
-          style={{
-            width: 96,
-            height: 96,
-            borderRadius: '50%',
-            objectFit: 'cover',
-            marginBottom: 10,
-            border: '3px solid rgba(98, 62, 32, 0.32)',
-            boxShadow: '0 8px 22px rgba(78, 46, 21, 0.2)',
-          }}
-        />
+        <div style={{ position: 'relative', display: 'inline-grid', placeItems: 'center', marginBottom: 10 }}>
+          {celebrateUpload && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.6, rotate: 0 }}
+              animate={{ opacity: [0, 0.9, 0], scale: [0.6, 1.08, 1.2], rotate: [0, 18, 36] }}
+              transition={{ duration: 1.1 }}
+              style={{
+                position: 'absolute',
+                width: 126,
+                height: 126,
+                borderRadius: '50%',
+                border: '2px dashed rgba(223, 122, 55, 0.52)',
+              }}
+            />
+          )}
+          <motion.img
+            src={`${import.meta.env.BASE_URL}schwubbi-hero.png`}
+            alt="Schwubbi"
+            animate={celebrateUpload ? { rotate: [0, -2.5, 2.5, -1.4, 1.4, 0] } : { rotate: 0 }}
+            transition={{ duration: 0.7 }}
+            style={{
+              width: 96,
+              height: 96,
+              borderRadius: '50%',
+              objectFit: 'cover',
+              border: '3px solid rgba(98, 62, 32, 0.32)',
+              boxShadow: '0 8px 22px rgba(78, 46, 21, 0.2)',
+            }}
+          />
+        </div>
         <h1 style={{ fontSize: 30, fontWeight: 800, marginBottom: 6, letterSpacing: 0.4 }}>
           Cat Tournament
         </h1>
@@ -108,22 +133,6 @@ export default function HomeScreen() {
         </button>
       </motion.div>
 
-      <motion.div
-        initial={{ y: 40, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        style={{ position: 'absolute', bottom: 40, right: 24 }}
-      >
-        <button
-          className="btn btn-icon btn-primary btn-note"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          style={{ fontSize: 30 }}
-        >
-          +
-        </button>
-      </motion.div>
-
       <input
         ref={fileInputRef}
         type="file"
@@ -133,28 +142,63 @@ export default function HomeScreen() {
         style={{ display: 'none' }}
       />
 
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        style={{ position: 'absolute', bottom: 34, left: 24, right: 24 }}
+      >
+        <motion.button
+          type="button"
+          className="album-slot"
+          animate={celebrateUpload ? { rotate: [0, -1.5, 1.5, -0.8, 0.8, 0] } : { rotate: 0 }}
+          transition={{ duration: 0.7 }}
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          style={{ position: 'relative', padding: '10px 14px', width: '100%', maxWidth: 360, margin: '0 auto', justifyContent: 'space-between' }}
+        >
+          <span style={{ fontSize: 13, opacity: uploading || uploadProgress ? 0 : 1, textAlign: 'left' }}>
+            Photo Here
+          </span>
+          {(uploading || uploadProgress) && (
+            <span style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'left' }}>{uploadProgress || 'Preparing upload...'}</span>
+          )}
+          {!uploading && (
+            <span
+              style={{
+                minWidth: 34,
+                height: 34,
+                display: 'inline-grid',
+                placeItems: 'center',
+                borderRadius: 10,
+                border: '1px solid rgba(113, 72, 39, 0.4)',
+                background: 'linear-gradient(142deg, #ef9a58, #d86f2d)',
+                color: '#fff9ef',
+                fontSize: 22,
+                lineHeight: 1,
+              }}
+            >
+              +
+            </span>
+          )}
+          <AnimatePresence>
+            {showPaw && (
+              <motion.div
+                className="paw-pop"
+                initial={{ opacity: 0, scale: 0.5, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.7, y: -6 }}
+              >
+                🐾
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.button>
+      </motion.div>
+
       <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center', fontSize: 11, color: 'rgba(64,40,24,0.33)' }}>
         v1.1.0
       </div>
-
-      {uploading && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{
-            position: 'absolute',
-            bottom: 110,
-            background: 'var(--paper-note)',
-            padding: '12px 18px',
-            borderRadius: 'var(--radius-note)',
-            fontSize: 14,
-            border: '1px dashed rgba(124, 82, 45, 0.44)',
-            boxShadow: '0 6px 18px rgba(70, 42, 20, 0.2)',
-          }}
-        >
-          {uploadProgress}
-        </motion.div>
-      )}
     </div>
   )
 }

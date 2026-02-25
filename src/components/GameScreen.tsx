@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { fetchAllImages } from '../lib/supabase'
+import { fetchAllImages, fetchCloudLeaderboard, upsertCloudLeaderboard } from '../lib/supabase'
 import type { ImageRecord } from '../lib/supabase'
-import { getAllElos, getElo } from '../lib/storage'
+import { getAllElos, getElo, upsertAllElos } from '../lib/storage'
 import type { EloEntry } from '../lib/storage'
 import { selectTournamentImages, generateBracket } from '../engine/tournament'
 import type { Matchup } from '../engine/tournament'
@@ -28,6 +28,16 @@ export default function GameScreen() {
   const [winnerRank, setWinnerRank] = useState(0)
   const [totalImages, setTotalImages] = useState(0)
   const [allImages, setAllImages] = useState<ImageRecord[]>([])
+  const cloudHydratedRef = useRef(false)
+
+  const syncCloudSnapshot = useCallback(async () => {
+    try {
+      const snapshot = await getAllElos()
+      await upsertCloudLeaderboard(snapshot)
+    } catch (err) {
+      console.warn('Cloud leaderboard sync failed', err)
+    }
+  }, [])
 
   const startTournament = useCallback(async (images?: ImageRecord[]) => {
     setState('loading')
@@ -39,6 +49,21 @@ export default function GameScreen() {
       if (imgs.length < 2) {
         setState('not-enough')
         return
+      }
+
+      if (!cloudHydratedRef.current) {
+        const localElos = await getAllElos()
+        if (localElos.length === 0) {
+          try {
+            const cloudElos = await fetchCloudLeaderboard()
+            if (cloudElos.length > 0) {
+              await upsertAllElos(cloudElos)
+            }
+          } catch (err) {
+            console.warn('Cloud leaderboard load failed', err)
+          }
+        }
+        cloudHydratedRef.current = true
       }
 
       const elos = await getAllElos()
@@ -79,6 +104,7 @@ export default function GameScreen() {
 
       if (!winId) {
         await updateEloBothLose(currentMatchup.left.id, currentMatchup.right.id)
+        void syncCloudSnapshot()
 
         if (currentIdx < matchups.length - 1) {
           setCurrentIdx((i) => i + 1)
@@ -112,6 +138,7 @@ export default function GameScreen() {
           : currentMatchup.right
 
       await updateElo(winId, loserId)
+      void syncCloudSnapshot()
 
       const newWinners = [...roundWinners, winner]
 
@@ -142,7 +169,7 @@ export default function GameScreen() {
       setMatchesInRound(nextBracket.length)
       setRoundWinners([])
     },
-    [allImages, currentIdx, matchups, roundWinners, startTournament]
+    [allImages, currentIdx, matchups, roundWinners, startTournament, syncCloudSnapshot]
   )
 
   if (state === 'loading') {

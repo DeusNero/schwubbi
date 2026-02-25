@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { Easing } from 'framer-motion'
 import type { Matchup } from '../engine/tournament'
 import { getThumbUrl } from '../lib/supabase'
-import { playLaunch, playTap, playElimination } from '../lib/sounds'
+import { playLaunch, playTap, playElimination, playCountdownReminder } from '../lib/sounds'
 
 interface BattleProps {
   matchup: Matchup
@@ -15,11 +15,12 @@ interface BattleProps {
 
 const ANIMATION_DURATION = 5
 const TIMEOUT_EXTRA = 3
+const TOTAL_TIME = ANIMATION_DURATION + TIMEOUT_EXTRA
 
 export default function Battle({ matchup, onResult, roundLabel, round, totalRounds }: BattleProps) {
-  const [phase, setPhase] = useState<'animate' | 'timeout' | 'chosen'>('animate')
+  const [phase, setPhase] = useState<'animate' | 'timeout' | 'timeout-fall' | 'chosen'>('animate')
   const [chosenId, setChosenId] = useState<string | null>(null)
-  const [timeLeft, setTimeLeft] = useState(ANIMATION_DURATION + TIMEOUT_EXTRA)
+  const [timeLeft, setTimeLeft] = useState(TOTAL_TIME)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -29,14 +30,17 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
     matchupIdRef.current = `${matchup.left.id}-${matchup.right.id}`
     setPhase('animate')
     setChosenId(null)
-    setTimeLeft(ANIMATION_DURATION + TIMEOUT_EXTRA)
+    setTimeLeft(TOTAL_TIME)
 
     playLaunch()
 
     countdownRef.current = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 1) return 0
-        return prev - 1
+        const next = prev <= 1 ? 0 : prev - 1
+        if (next <= TIMEOUT_EXTRA && next > 0) {
+          playCountdownReminder(next)
+        }
+        return next
       })
     }, 1000)
 
@@ -44,9 +48,9 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
       setPhase('timeout')
       timeoutTimerRef.current = setTimeout(() => {
         if (countdownRef.current) clearInterval(countdownRef.current)
-        setPhase('chosen')
+        setPhase('timeout-fall')
         setChosenId(null)
-        setTimeout(() => onResult(null), 800)
+        setTimeout(() => onResult(null), 900)
       }, TIMEOUT_EXTRA * 1000)
     }, ANIMATION_DURATION * 1000)
 
@@ -60,7 +64,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
 
   const handleChoice = useCallback(
     (id: string) => {
-      if (phase === 'chosen') return
+      if (phase === 'chosen' || phase === 'timeout-fall') return
       if (timerRef.current) clearTimeout(timerRef.current)
       if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current)
       if (countdownRef.current) clearInterval(countdownRef.current)
@@ -85,20 +89,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
 
   const progress = totalRounds > 1 ? (round - 1) / (totalRounds - 1) : 1
   const scaleFactor = 0.85 + 0.15 * progress
-  const baseSize = Math.min(window.innerWidth * 0.4, 160)
-  const imgSize = baseSize * scaleFactor
-
-  const imageStyle: React.CSSProperties = {
-    width: imgSize,
-    height: imgSize,
-    borderRadius: '50%',
-    objectFit: 'cover',
-    border: '3px solid rgba(120, 82, 47, 0.35)',
-    boxShadow: '0 10px 28px rgba(74, 46, 24, 0.28)',
-    cursor: 'pointer',
-    userSelect: 'none',
-    WebkitUserSelect: 'none',
-  }
+  const cardWidth = Math.min(window.innerWidth * 0.4, 190) * scaleFactor
 
   const getChosenStyle = (id: string): React.CSSProperties => {
     if (!chosenId) return {}
@@ -106,8 +97,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
     if (!belongsToMatchup) return {}
     if (chosenId === id) {
       return {
-        border: '3px solid var(--gold)',
-        boxShadow: '0 0 22px rgba(191, 122, 27, 0.55)',
+        boxShadow: '0 0 0 3px rgba(191, 122, 27, 0.65), 0 13px 28px rgba(64, 38, 20, 0.32)',
       }
     }
     return { opacity: 0.3, filter: 'grayscale(1)' }
@@ -116,11 +106,11 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
   const vw = typeof window !== 'undefined' ? window.innerWidth : 400
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800
 
-  const flexOffset = imgSize / 2 + 8
-  const maxSpreadX = (vw / 2) - flexOffset - imgSize / 2 - 12
+  const flexOffset = cardWidth / 2 + 8
+  const maxSpreadX = (vw / 2) - flexOffset - cardWidth / 2 - 12
   const spreadX = Math.min(vw * 0.25, Math.max(maxSpreadX, 20))
 
-  const topSafe = 140 + imgSize / 2
+  const topSafe = 170 + cardWidth / 2
   const restFromTop = vh * 0.88
   const riseY = -(restFromTop - topSafe)
 
@@ -141,16 +131,21 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
     ease: animationEase,
   }
 
-  const frozenLeft = { x: -spreadX, y: 0 }
-  const frozenRight = { x: spreadX, y: 0 }
+  const frozenLeft = { x: -spreadX, y: 0, rotate: -3 }
+  const frozenRight = { x: spreadX, y: 0, rotate: 3 }
+  const yarnWidth = Math.max(0, (timeLeft / TOTAL_TIME) * 100)
 
   return (
-    <div className="screen">
+    <motion.div
+      className="screen"
+      animate={phase === 'timeout-fall' ? { x: [-8, 8, -6, 6, -2, 2, 0] } : { x: 0 }}
+      transition={{ duration: 0.4 }}
+    >
       <div
         className="paper-note"
         style={{
           position: 'absolute',
-          top: 38,
+          top: 30,
           fontSize: 14,
           color: 'var(--text-dim)',
           fontWeight: 600,
@@ -166,19 +161,24 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
         <div
           style={{
             position: 'absolute',
-            top: 80,
+            top: 76,
             zIndex: 10,
             textAlign: 'center',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 8,
           }}
         >
-          <div style={{
-            fontSize: 32,
-            fontWeight: 800,
-            fontVariantNumeric: 'tabular-nums',
-            color: timeLeft <= TIMEOUT_EXTRA ? 'var(--accent)' : 'rgba(72,45,26,0.35)',
-            textShadow: timeLeft <= TIMEOUT_EXTRA ? '0 0 20px var(--accent-glow)' : 'none',
-          }}>
-            {timeLeft}
+          <div className="yarn-timer">
+            <motion.div
+              className="yarn-timer-thread"
+              animate={{ width: `${yarnWidth}%` }}
+              transition={{ duration: 0.25 }}
+            >
+              <div className="yarn-ball" />
+            </motion.div>
           </div>
           <AnimatePresence mode="wait">
             {phase === 'animate' && !chosenId && (
@@ -207,7 +207,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
                   marginTop: 4,
                 }}
               >
-                LAST CHANCE!
+                Gentle reminder: choose soon
               </motion.div>
             )}
           </AnimatePresence>
@@ -219,21 +219,22 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
           position: 'absolute',
           bottom: '12%',
           display: 'flex',
-          gap: 16,
+          gap: 18,
         }}
       >
-        <motion.img
+        <motion.button
           key={`left-${matchup.left.id}`}
-          src={leftUrl}
-          alt="Left cat"
-          style={{ ...imageStyle, ...getChosenStyle(matchup.left.id) }}
+          className="polaroid-card"
+          style={{ width: cardWidth, transform: 'rotate(-2.8deg)', cursor: 'pointer', ...getChosenStyle(matchup.left.id) }}
           animate={
             phase === 'timeout'
               ? frozenLeft
+              : phase === 'timeout-fall'
+                ? { x: -spreadX * 0.4, y: vh * 0.72, rotate: -18, opacity: 0.15 }
               : phase === 'chosen'
                 ? chosenId === matchup.left.id
-                  ? { x: 0, y: riseY * 0.3, scale: 1.15 }
-                  : { opacity: 0, scale: 0.5 }
+                  ? { x: 0, y: riseY * 0.23, scale: 1.08, rotate: -1.2 }
+                  : { opacity: 0, scale: 0.5, y: vh * 0.54, rotate: -15 }
                 : leftKeyframes
           }
           transition={
@@ -243,20 +244,28 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
           }
           onClick={() => handleChoice(matchup.left.id)}
           draggable={false}
-        />
+        >
+          <img
+            src={leftUrl}
+            alt="Left cat"
+            className="polaroid-photo"
+            draggable={false}
+          />
+        </motion.button>
 
-        <motion.img
+        <motion.button
           key={`right-${matchup.right.id}`}
-          src={rightUrl}
-          alt="Right cat"
-          style={{ ...imageStyle, ...getChosenStyle(matchup.right.id) }}
+          className="polaroid-card"
+          style={{ width: cardWidth, transform: 'rotate(2.2deg)', cursor: 'pointer', ...getChosenStyle(matchup.right.id) }}
           animate={
             phase === 'timeout'
               ? frozenRight
+              : phase === 'timeout-fall'
+                ? { x: spreadX * 0.4, y: vh * 0.74, rotate: 20, opacity: 0.15 }
               : phase === 'chosen'
                 ? chosenId === matchup.right.id
-                  ? { x: 0, y: riseY * 0.3, scale: 1.15 }
-                  : { opacity: 0, scale: 0.5 }
+                  ? { x: 0, y: riseY * 0.23, scale: 1.08, rotate: 1.2 }
+                  : { opacity: 0, scale: 0.5, y: vh * 0.54, rotate: 15 }
                 : rightKeyframes
           }
           transition={
@@ -266,8 +275,15 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
           }
           onClick={() => handleChoice(matchup.right.id)}
           draggable={false}
-        />
+        >
+          <img
+            src={rightUrl}
+            alt="Right cat"
+            className="polaroid-photo"
+            draggable={false}
+          />
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   )
 }
