@@ -104,6 +104,8 @@ export default function BackupRestore() {
         justifyContent: 'flex-start',
         paddingTop: 48,
         gap: 24,
+        overflowY: 'auto',
+        paddingBottom: 28,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', maxWidth: 360 }}>
