@@ -20,7 +20,19 @@ export interface ImageRecord {
   id: string
   filename: string
   created_at: string
+  content_hash?: string | null
 }
+
+export interface BackfillProgress {
+  total: number
+  processed: number
+  hashed: number
+  failed: number
+}
+
+export type UploadImageResult =
+  | { status: 'uploaded' }
+  | { status: 'duplicate' }
 
 export function getThumbUrl(imageId: string): string {
   if (!hasSupabaseConfig) return ''
@@ -47,8 +59,9 @@ export async function uploadImage(
   id: string,
   thumbBlob: Blob,
   fullBlob: Blob,
-  filename: string
-): Promise<void> {
+  filename: string,
+  contentHash: string
+): Promise<UploadImageResult> {
   if (!hasSupabaseConfig) {
     throw new Error('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
   }
@@ -68,9 +81,94 @@ export async function uploadImage(
 
   const { error } = await supabase
     .from('images')
-    .insert({ id, filename })
+    .insert({ id, filename, content_hash: contentHash })
+
+  if (!error) {
+    return { status: 'uploaded' }
+  }
+
+  if (error.code === '23505') {
+    await Promise.allSettled([
+      supabase.storage.from('thumbs').remove([`${id}.webp`]),
+      supabase.storage.from('full').remove([`${id}.webp`]),
+    ])
+    return { status: 'duplicate' }
+  }
+
+  throw error
+}
+
+export async function hashBlobSha256(blob: Blob): Promise<string> {
+  const raw = await blob.arrayBuffer()
+  const digest = await crypto.subtle.digest('SHA-256', raw)
+  const bytes = new Uint8Array(digest)
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+export async function hasImageWithContentHash(contentHash: string): Promise<boolean> {
+  if (!hasSupabaseConfig) return false
+  const { data, error } = await supabase
+    .from('images')
+    .select('id')
+    .eq('content_hash', contentHash)
+    .limit(1)
 
   if (error) throw error
+  return Boolean(data && data.length > 0)
+}
+
+export async function backfillMissingContentHashes(
+  onProgress?: (progress: BackfillProgress) => void
+): Promise<BackfillProgress> {
+  if (!hasSupabaseConfig) {
+    return { total: 0, processed: 0, hashed: 0, failed: 0 }
+  }
+
+  const { data, error } = await supabase
+    .from('images')
+    .select('id')
+    .is('content_hash', null)
+
+  if (error) throw error
+
+  const missing = data ?? []
+  const progress: BackfillProgress = {
+    total: missing.length,
+    processed: 0,
+    hashed: 0,
+    failed: 0,
+  }
+  onProgress?.(progress)
+
+  for (const row of missing) {
+    try {
+      const fullUrl = getFullUrl(row.id)
+      if (!fullUrl) throw new Error('Missing full image URL')
+      const response = await fetch(fullUrl, { cache: 'no-store' })
+      if (!response.ok) {
+        throw new Error(`Fetch failed: ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      const contentHash = await hashBlobSha256(blob)
+      const { error: updateError } = await supabase
+        .from('images')
+        .update({ content_hash: contentHash })
+        .eq('id', row.id)
+        .is('content_hash', null)
+
+      if (updateError) throw updateError
+      progress.hashed += 1
+    } catch (err) {
+      console.warn('Backfill hash failed', row.id, err)
+      progress.failed += 1
+    } finally {
+      progress.processed += 1
+      onProgress?.({ ...progress })
+    }
+  }
+
+  return progress
 }
 
 export async function ensureAnonymousSession(): Promise<string | null> {

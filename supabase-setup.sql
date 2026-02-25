@@ -77,3 +77,13 @@ CREATE POLICY "Users can insert own leaderboard" ON public.leaderboards FOR INSE
 CREATE POLICY "Users can update own leaderboard" ON public.leaderboards FOR UPDATE
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
+
+-- 6. Duplicate prevention for uploads (safe migration)
+-- Run on existing projects as well; IF NOT EXISTS keeps it idempotent.
+ALTER TABLE public.images
+  ADD COLUMN IF NOT EXISTS content_hash text;
+
+-- Enforce uniqueness for hashed images while still allowing temporary NULLs.
+CREATE UNIQUE INDEX IF NOT EXISTS images_content_hash_unique_idx
+  ON public.images (content_hash)
+  WHERE content_hash IS NOT NULL;

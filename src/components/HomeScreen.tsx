@@ -1,7 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { uploadImage, getThumbUrl } from '../lib/supabase'
+import {
+  uploadImage,
+  getThumbUrl,
+  hashBlobSha256,
+  hasImageWithContentHash,
+  backfillMissingContentHashes,
+} from '../lib/supabase'
 import imageCompression from 'browser-image-compression'
 import { LeaderboardSketchIcon } from './icons/SketchIcons'
 import { getAllElos } from '../lib/storage'
@@ -94,11 +100,30 @@ export default function HomeScreen() {
 
     setUploading(true)
     const total = files.length
-    let done = 0
+    let uploaded = 0
+    let skipped = 0
 
-    for (const file of Array.from(files)) {
+    try {
+      setUploadProgress('Backfilling existing photos...')
+      const backfill = await backfillMissingContentHashes((progress) => {
+        if (progress.total === 0) {
+          setUploadProgress('Backfilling existing photos... already up to date')
+          return
+        }
+        setUploadProgress(`Backfilling existing photos... ${progress.processed}/${progress.total}`)
+      })
+      if (backfill.failed > 0) {
+        console.warn('Some existing images could not be backfilled', backfill)
+      }
+    } catch (err) {
+      console.error('Backfill failed', err)
+      setUploadProgress('Backfill failed. Duplicate protection may be limited.')
+      await new Promise((r) => setTimeout(r, 1500))
+    }
+
+    for (const [idx, file] of Array.from(files).entries()) {
       try {
-        setUploadProgress(`Processing ${done + 1}/${total}...`)
+        setUploadProgress(`Processing ${idx + 1}/${total}...`)
 
         const thumbBlob = await imageCompression(file, {
           maxWidthOrHeight: 400,
@@ -114,10 +139,25 @@ export default function HomeScreen() {
           useWebWorker: true,
         })
 
+        const contentHash = await hashBlobSha256(fullBlob)
+        const exists = await hasImageWithContentHash(contentHash)
+        if (exists) {
+          skipped++
+          setUploadProgress(`Skipped duplicate ${skipped}/${total}`)
+          continue
+        }
+
         const id = crypto.randomUUID()
-        await uploadImage(id, thumbBlob, fullBlob, file.name)
-        done++
-        setUploadProgress(`Uploaded ${done}/${total}`)
+        const result = await uploadImage(id, thumbBlob, fullBlob, file.name, contentHash)
+
+        if (result.status === 'duplicate') {
+          skipped++
+          setUploadProgress(`Skipped duplicate ${skipped}/${total}`)
+          continue
+        }
+
+        uploaded++
+        setUploadProgress(`Uploaded ${uploaded}/${total}`)
       } catch (err) {
         console.error('Upload failed for', file.name, err)
         setUploadProgress(`Failed: ${file.name}`)
@@ -125,8 +165,8 @@ export default function HomeScreen() {
       }
     }
 
-    setUploadProgress(`Done! ${done} photo${done !== 1 ? 's' : ''} added`)
-    if (done > 0) {
+    setUploadProgress(`Done! Uploaded ${uploaded}, skipped ${skipped} duplicate${skipped !== 1 ? 's' : ''}`)
+    if (uploaded > 0) {
       setShowPaw(true)
       setCelebrateUpload(true)
       setTimeout(() => setShowPaw(false), 1200)
