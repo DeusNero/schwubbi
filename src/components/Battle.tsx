@@ -181,6 +181,7 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
   const progress = totalRounds > 1 ? (round - 1) / (totalRounds - 1) : 1
   const scaleFactor = 0.85 + 0.15 * progress
   const cardWidth = Math.min(window.innerWidth * 0.4, 190) * scaleFactor
+  const timeoutScale = 1.3
 
   const getChosenStyle = (id: string): React.CSSProperties => {
     if (!chosenId) return {}
@@ -197,8 +198,10 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
   const vw = typeof window !== 'undefined' ? window.innerWidth : 400
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800
 
-  const flexOffset = cardWidth / 2 + 8
-  const maxSpreadX = (vw / 2) - flexOffset - cardWidth / 2 - 12
+  // Reserve extra horizontal space during timeout so larger shaking cards stay in viewport.
+  const layoutCardWidth = phase === 'timeout' ? cardWidth * timeoutScale : cardWidth
+  const flexOffset = layoutCardWidth / 2 + 8
+  const maxSpreadX = (vw / 2) - flexOffset - layoutCardWidth / 2 - 12
   const spreadX = Math.min(vw * 0.25, Math.max(maxSpreadX, 20))
 
   const cardHeight = cardWidth + 28
@@ -337,7 +340,12 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
           style={{ width: cardWidth, transform: 'rotate(-2.8deg)', cursor: 'pointer', overflow: 'visible', ...getChosenStyle(matchup.left.id) }}
           animate={
             phase === 'timeout'
-              ? { x: -spreadX, y: 0, scale: 1.3, rotate: [-8, 2, -7, 3, -8] }
+              ? {
+                  x: -spreadX,
+                  y: 0,
+                  scale: [timeoutScale, timeoutScale, timeoutScale, timeoutScale, timeoutScale],
+                  rotate: [-8, 2, -7, 3, -8],
+                }
               : phase === 'timeout-fall'
                 ? { x: -spreadX * 0.4, y: vh * 0.72, rotate: -18, opacity: 0.15 }
               : phase === 'chosen'
@@ -431,7 +439,12 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
           style={{ width: cardWidth, transform: 'rotate(2.2deg)', cursor: 'pointer', overflow: 'visible', ...getChosenStyle(matchup.right.id) }}
           animate={
             phase === 'timeout'
-              ? { x: spreadX, y: 0, scale: 1.3, rotate: [8, -2, 7, -3, 8] }
+              ? {
+                  x: spreadX,
+                  y: 0,
+                  scale: [timeoutScale, timeoutScale, timeoutScale, timeoutScale, timeoutScale],
+                  rotate: [8, -2, 7, -3, 8],
+                }
               : phase === 'timeout-fall'
                 ? { x: spreadX * 0.4, y: vh * 0.74, rotate: 20, opacity: 0.15 }
               : phase === 'chosen'

@@ -297,11 +297,6 @@ export default function HomeScreen() {
               ›
             </button>
           </div>
-          {heroOptions.length > 1 && (
-            <div style={{ marginTop: 6, fontSize: 10, color: 'rgba(72, 45, 26, 0.58)' }}>
-              Swipe image or tap arrows
-            </div>
-          )}
         </div>
         <h1 style={{ fontSize: 30, fontWeight: 800, marginBottom: 6, letterSpacing: 0.4 }}>
           Schwubbi Tournament
