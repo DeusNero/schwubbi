@@ -292,38 +292,27 @@ export default function HomeScreen() {
         style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 280 }}
       >
         <button className="btn btn-primary btn-note" onClick={() => navigate('/play')} style={{ width: '100%' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, position: 'relative' }}>
-            <motion.svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, position: 'relative' }}>
+            <motion.span
               animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
-              style={{ display: 'inline-block' }}
+              transition={{ repeat: Infinity, duration: 1.3, ease: 'linear' }}
+              style={{ display: 'inline-block', fontSize: 31, lineHeight: 1 }}
               aria-hidden="true"
             >
-              <circle cx="12" cy="12" r="8.25" fill="#f7c7db" stroke="#c86e98" strokeWidth="1.4" />
-              <path
-                d="M6.8 12.3c1.4-1.2 2.6-1.7 4.1-1.7 1.8 0 3.2.8 5.2 2.8M7.8 9.4c1.9-1.2 3.5-1.3 5.3-.5m-4.5 7c1.8-.7 3.4-.5 5.6.7"
-                stroke="#ad4f7e"
-                strokeLinecap="round"
-                strokeWidth="1.35"
-              />
-              <path d="M18.6 7.8l2.3-1.7" stroke="#ad4f7e" strokeLinecap="round" strokeWidth="1.35" />
-            </motion.svg>
-            <span style={{ position: 'relative', display: 'inline-block', paddingBottom: 2 }}>
+              🧶
+            </motion.span>
+            <span style={{ position: 'relative', display: 'inline-block', paddingBottom: 2, marginLeft: -1 }}>
               Play
               <motion.svg
-                width="46"
+                width="62"
                 height="12"
-                viewBox="0 0 46 12"
+                viewBox="0 0 62 12"
                 fill="none"
                 aria-hidden="true"
-                style={{ position: 'absolute', left: -2, bottom: -8, pointerEvents: 'none' }}
+                style={{ position: 'absolute', left: -18, bottom: -8, pointerEvents: 'none' }}
               >
                 <motion.path
-                  d="M2 7 C 12 10, 24 2, 44 7"
+                  d="M2 7 C 13 4, 19 8, 26 7 C 35 10, 47 2, 60 7"
                   stroke="#c86e98"
                   strokeWidth="2"
                   strokeLinecap="round"
