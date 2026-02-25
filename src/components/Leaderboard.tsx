@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { getAllElos } from '../lib/storage'
+import { getAllElos, clearAllElos } from '../lib/storage'
 import type { EloEntry } from '../lib/storage'
-import { getFullUrl } from '../lib/supabase'
+import { clearCloudLeaderboard, getFullUrl } from '../lib/supabase'
 import { LeaderboardSketchIcon } from './icons/SketchIcons'
 
 const MEDAL_COLORS = ['var(--gold)', 'var(--silver)', 'var(--bronze)']
@@ -14,18 +14,48 @@ export default function Leaderboard() {
   const [topEntries, setTopEntries] = useState<EloEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [viewingImage, setViewingImage] = useState<string | null>(null)
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false)
+  const [resetting, setResetting] = useState(false)
+  const [resetStatus, setResetStatus] = useState('')
 
-  useEffect(() => {
-    ;(async () => {
+  const loadLeaderboard = async () => {
+    setLoading(true)
+    try {
       const all = await getAllElos()
       const sorted = all
         .filter((e) => e.matchups > 0)
         .sort((a, b) => b.elo - a.elo)
         .slice(0, 10)
       setTopEntries(sorted)
+    } finally {
       setLoading(false)
-    })()
+    }
+  }
+
+  useEffect(() => {
+    void loadLeaderboard()
   }, [])
+
+  const handleConfirmReset = async () => {
+    setResetting(true)
+    setResetStatus('')
+    try {
+      await clearAllElos()
+      try {
+        await clearCloudLeaderboard()
+      } catch (err) {
+        console.warn('Cloud leaderboard clear failed', err)
+      }
+      await loadLeaderboard()
+      setConfirmResetOpen(false)
+      setResetStatus('Leaderboard reset. A new leaderboard will begin now.')
+    } catch (err) {
+      console.error('Failed to reset leaderboard', err)
+      setResetStatus('Could not reset leaderboard. Please try again.')
+    } finally {
+      setResetting(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -64,10 +94,24 @@ export default function Leaderboard() {
           Leaderboard
         </h2>
       </div>
+      <button
+        className="btn btn-secondary btn-note"
+        onClick={() => setConfirmResetOpen(true)}
+        disabled={resetting}
+        style={{ width: '100%', maxWidth: 360, color: '#8a3f2a' }}
+      >
+        Reset leaderboard
+      </button>
 
       {topEntries.length === 0 ? (
         <div style={{ textAlign: 'center', color: 'var(--text-dim)', marginTop: 40 }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🏜️</div>
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 1.3, ease: 'linear' }}
+            style={{ fontSize: 96, marginBottom: 12, display: 'inline-block' }}
+          >
+            🧶
+          </motion.div>
           <p>No rankings yet. Play some games first!</p>
         </div>
       ) : (
@@ -150,6 +194,50 @@ export default function Leaderboard() {
             alt="Full size"
             style={{ maxWidth: '95vw', maxHeight: '95vh', objectFit: 'contain', borderRadius: 8 }}
           />
+        </div>
+      )}
+      {confirmResetOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 110,
+            background: 'rgba(0,0,0,0.42)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 18,
+          }}
+        >
+          <div className="paper-card" style={{ width: '100%', maxWidth: 340, textAlign: 'center' }}>
+            <h3 style={{ fontSize: 17, marginBottom: 8 }}>Reset leaderboard?</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 14 }}>
+              If you confirm, all past games will be deleted and a new leaderboard will begin.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button
+                className="btn btn-secondary btn-note"
+                onClick={() => setConfirmResetOpen(false)}
+                disabled={resetting}
+                style={{ minWidth: 110 }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary btn-note"
+                onClick={handleConfirmReset}
+                disabled={resetting}
+                style={{ minWidth: 110, background: 'linear-gradient(145deg, #d06f42, #b24f2a)' }}
+              >
+                {resetting ? 'Resetting...' : 'Confirm reset'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {resetStatus && (
+        <div style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', maxWidth: 360 }}>
+          {resetStatus}
         </div>
       )}
     </div>

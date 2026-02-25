@@ -252,3 +252,16 @@ export async function upsertCloudLeaderboard(entries: CloudEloEntry[]): Promise<
 
   if (error) throw error
 }
+
+export async function clearCloudLeaderboard(): Promise<void> {
+  if (!hasSupabaseConfig) return
+  const userId = await ensureAnonymousSession()
+  if (!userId) return
+
+  const { error } = await supabase
+    .from('leaderboards')
+    .delete()
+    .eq('user_id', userId)
+
+  if (error) throw error
+}

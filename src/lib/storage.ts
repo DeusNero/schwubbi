@@ -1,4 +1,4 @@
-import { get, set, keys } from 'idb-keyval'
+import { get, set, keys, del } from 'idb-keyval'
 
 export interface EloEntry {
   imageId: string
@@ -72,6 +72,16 @@ export async function importAllElos(
 export async function upsertAllElos(entries: EloEntry[]): Promise<void> {
   for (const entry of entries) {
     await setElo(entry)
+  }
+}
+
+export async function clearAllElos(): Promise<void> {
+  const allKeys = await keys()
+  const eloKeys = allKeys.filter(
+    (k) => typeof k === 'string' && k.startsWith(ELO_PREFIX)
+  ) as string[]
+  for (const key of eloKeys) {
+    await del(key)
   }
 }
 
