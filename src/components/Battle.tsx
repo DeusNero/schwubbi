@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { Easing } from 'framer-motion'
 import type { Matchup } from '../engine/tournament'
 import { getThumbUrl } from '../lib/supabase'
-import { playLaunch, playTap, playElimination, playCountdownReminder } from '../lib/sounds'
+import { playLaunch, playTap, playElimination, playCountdownReminder, playSurprisedMeow } from '../lib/sounds'
 
 interface BattleProps {
   matchup: Matchup
@@ -50,7 +50,8 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
         if (countdownRef.current) clearInterval(countdownRef.current)
         setPhase('timeout-fall')
         setChosenId(null)
-        setTimeout(() => onResult(null), 900)
+        playSurprisedMeow()
+        setTimeout(() => onResult(null), 1350)
       }, TIMEOUT_EXTRA * 1000)
     }, ANIMATION_DURATION * 1000)
 
@@ -110,7 +111,8 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
   const maxSpreadX = (vw / 2) - flexOffset - cardWidth / 2 - 12
   const spreadX = Math.min(vw * 0.25, Math.max(maxSpreadX, 20))
 
-  const topSafe = 170 + cardWidth / 2
+  const cardHeight = cardWidth + 28
+  const topSafe = 150 + cardHeight / 2
   const restFromTop = vh * 0.88
   const riseY = -(restFromTop - topSafe)
 
@@ -202,12 +204,11 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
                 style={{
                   fontSize: 22,
                   fontWeight: 800,
-                  color: 'var(--accent)',
-                  textShadow: '0 0 20px var(--accent-glow)',
+                  color: 'rgba(72,45,26,0.56)',
                   marginTop: 4,
                 }}
               >
-                Gentle reminder: choose soon
+                Choose soon
               </motion.div>
             )}
           </AnimatePresence>
@@ -240,7 +241,9 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
           transition={
             phase === 'animate'
               ? animationTransition
-              : { duration: 0.4, ease: 'easeOut' }
+              : phase === 'timeout-fall'
+                ? { duration: 0.6, ease: 'easeOut' }
+                : { duration: 0.4, ease: 'easeOut' }
           }
           onClick={() => handleChoice(matchup.left.id)}
           draggable={false}
@@ -271,7 +274,9 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
           transition={
             phase === 'animate'
               ? animationTransition
-              : { duration: 0.4, ease: 'easeOut' }
+              : phase === 'timeout-fall'
+                ? { duration: 0.6, ease: 'easeOut' }
+                : { duration: 0.4, ease: 'easeOut' }
           }
           onClick={() => handleChoice(matchup.right.id)}
           draggable={false}

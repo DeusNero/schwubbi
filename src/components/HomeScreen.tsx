@@ -105,10 +105,10 @@ export default function HomeScreen() {
           />
         </div>
         <h1 style={{ fontSize: 30, fontWeight: 800, marginBottom: 6, letterSpacing: 0.4 }}>
-          Cat Tournament
+          Schwubbi Tournament
         </h1>
         <p style={{ color: 'var(--text-dim)', fontSize: 14 }}>
-          Find the best cat photo
+          Find the best foto
         </p>
       </motion.div>
 
@@ -157,12 +157,6 @@ export default function HomeScreen() {
           disabled={uploading}
           style={{ position: 'relative', padding: '10px 14px', width: '100%', maxWidth: 360, margin: '0 auto', justifyContent: 'space-between' }}
         >
-          <span style={{ fontSize: 13, opacity: uploading || uploadProgress ? 0 : 1, textAlign: 'left' }}>
-            Photo Here
-          </span>
-          {(uploading || uploadProgress) && (
-            <span style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'left' }}>{uploadProgress || 'Preparing upload...'}</span>
-          )}
           {!uploading && (
             <span
               style={{
@@ -180,6 +174,12 @@ export default function HomeScreen() {
             >
               +
             </span>
+          )}
+          <span style={{ fontSize: 13, opacity: uploading || uploadProgress ? 0 : 1, textAlign: 'left' }}>
+            Photo Here
+          </span>
+          {(uploading || uploadProgress) && (
+            <span style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'left' }}>{uploadProgress || 'Preparing upload...'}</span>
           )}
           <AnimatePresence>
             {showPaw && (

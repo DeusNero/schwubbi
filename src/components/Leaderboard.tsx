@@ -7,7 +7,7 @@ import { getFullUrl } from '../lib/supabase'
 import { LeaderboardSketchIcon } from './icons/SketchIcons'
 
 const MEDAL_COLORS = ['var(--gold)', 'var(--silver)', 'var(--bronze)']
-const MEDAL_ICONS = ['👑', '🥈', '🥉', '4', '5']
+const MEDAL_ICONS = ['👑', '🥈', '🥉']
 
 export default function Leaderboard() {
   const navigate = useNavigate()
@@ -21,7 +21,7 @@ export default function Leaderboard() {
       const sorted = all
         .filter((e) => e.matchups > 0)
         .sort((a, b) => b.elo - a.elo)
-        .slice(0, 5)
+        .slice(0, 10)
       setTopEntries(sorted)
       setLoading(false)
     })()
@@ -71,7 +71,7 @@ export default function Leaderboard() {
           <p>No rankings yet. Play some games first!</p>
         </div>
       ) : (
-        <div style={{ width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 18 }}>
           {topEntries.map((entry, i) => (
             <motion.div
               key={entry.imageId}
@@ -83,13 +83,15 @@ export default function Leaderboard() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 14,
-                padding: 14,
+                gap: 16,
+                padding: 16,
                 borderRadius: 'var(--radius-note)',
                 border: i === 0 ? '1px solid var(--gold)' : '1px solid var(--border)',
                 boxShadow: i === 0 ? '0 0 20px rgba(255, 215, 0, 0.15)' : undefined,
                 cursor: 'pointer',
-                maxWidth: 360,
+                width: i < 3 ? '100%' : '80%',
+                maxWidth: i < 3 ? 360 : 288,
+                alignSelf: 'center',
               }}
             >
               <div
@@ -101,15 +103,15 @@ export default function Leaderboard() {
                   fontWeight: 700,
                 }}
               >
-                {MEDAL_ICONS[i]}
+                {MEDAL_ICONS[i] ?? `${i + 1}`}
               </div>
 
               <img
                 src={getFullUrl(entry.imageId)}
                 alt={`Rank ${i + 1}`}
                 style={{
-                  width: 56,
-                  height: 56,
+                  width: 72,
+                  height: 72,
                   borderRadius: '50%',
                   objectFit: 'cover',
                   border: `2px solid ${MEDAL_COLORS[i] ?? 'rgba(118,88,61,0.4)'}`,

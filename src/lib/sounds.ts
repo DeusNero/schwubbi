@@ -143,6 +143,24 @@ export function playCountdownReminder(second: number) {
   osc.stop(t + 0.24)
 }
 
+export function playSurprisedMeow() {
+  const ctx = getCtx()
+  const t = ctx.currentTime
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+  osc.type = 'triangle'
+  osc.frequency.setValueAtTime(720, t)
+  osc.frequency.linearRampToValueAtTime(980, t + 0.08)
+  osc.frequency.linearRampToValueAtTime(760, t + 0.18)
+  gain.gain.setValueAtTime(0.0001, t)
+  gain.gain.linearRampToValueAtTime(0.055, t + 0.02)
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22)
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+  osc.start(t)
+  osc.stop(t + 0.24)
+}
+
 export function playFinale() {
   const ctx = getCtx()
   const notes = [523, 659, 784, 1047]
