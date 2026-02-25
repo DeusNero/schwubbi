@@ -43,8 +43,13 @@ export default function HomeScreen() {
   const defaultHeroSrc = `${import.meta.env.BASE_URL}schwubbi-hero.png`
   const [showPaw, setShowPaw] = useState(false)
   const [celebrateUpload, setCelebrateUpload] = useState(false)
+  const [uploadAuthOpen, setUploadAuthOpen] = useState(false)
+  const [uploadPasswordInput, setUploadPasswordInput] = useState('')
+  const [uploadPasswordError, setUploadPasswordError] = useState('')
+  const [uploadUnlocked, setUploadUnlocked] = useState(false)
   const [heroOptions, setHeroOptions] = useState<HeroOption[]>([{ src: defaultHeroSrc, rank: null }])
   const [heroIdx, setHeroIdx] = useState(0)
+  const uploadPasswordRequired = import.meta.env.VITE_UPLOAD_PASSWORD ?? '123456789'
   const buildDate = new Date(import.meta.env.VITE_BUILD_TIME ?? '')
   const buildLabel = Number.isNaN(buildDate.getTime())
     ? 'Build time unavailable'
@@ -149,6 +154,27 @@ export default function HomeScreen() {
     enqueueFiles(files)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }, [enqueueFiles])
+
+  const openUploadPicker = useCallback(() => {
+    if (uploadUnlocked) {
+      fileInputRef.current?.click()
+      return
+    }
+    setUploadAuthOpen(true)
+    setUploadPasswordInput('')
+    setUploadPasswordError('')
+  }, [uploadUnlocked])
+
+  const confirmUploadPassword = useCallback(() => {
+    if (uploadPasswordInput.trim() === uploadPasswordRequired) {
+      setUploadUnlocked(true)
+      setUploadAuthOpen(false)
+      setUploadPasswordError('')
+      fileInputRef.current?.click()
+      return
+    }
+    setUploadPasswordError('Wrong password')
+  }, [uploadPasswordInput, uploadPasswordRequired])
 
   return (
     <div className="screen" style={{ gap: 28 }}>
@@ -350,7 +376,7 @@ export default function HomeScreen() {
           className="album-slot"
           animate={celebrateUpload ? { rotate: [0, -1.5, 1.5, -0.8, 0.8, 0] } : { rotate: 0 }}
           transition={{ duration: 0.7 }}
-          onClick={() => fileInputRef.current?.click()}
+          onClick={openUploadPicker}
           style={{ position: 'relative', padding: '10px 14px', width: '100%', maxWidth: 360, margin: '0 auto', justifyContent: 'flex-start', gap: 10 }}
         >
           <span
@@ -427,6 +453,62 @@ export default function HomeScreen() {
           </button>
         )}
       </motion.div>
+
+      {uploadAuthOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 120,
+            background: 'rgba(0,0,0,0.42)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 18,
+          }}
+        >
+          <div className="paper-card" style={{ width: '100%', maxWidth: 330, textAlign: 'center' }}>
+            <h3 style={{ fontSize: 17, marginBottom: 8 }}>Upload password</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 12 }}>
+              Enter password to add photos.
+            </p>
+            <input
+              type="password"
+              value={uploadPasswordInput}
+              onChange={(e) => setUploadPasswordInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  confirmUploadPassword()
+                }
+              }}
+              className="paper-input"
+              style={{ marginBottom: 10, textAlign: 'center' }}
+              autoFocus
+            />
+            {uploadPasswordError && (
+              <div style={{ fontSize: 12, color: '#a44a30', marginBottom: 10 }}>
+                {uploadPasswordError}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button
+                className="btn btn-secondary btn-note"
+                onClick={() => setUploadAuthOpen(false)}
+                style={{ minWidth: 100 }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary btn-note"
+                onClick={confirmUploadPassword}
+                style={{ minWidth: 100 }}
+              >
+                Unlock
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center', fontSize: 11, color: 'rgba(64,40,24,0.33)' }}>
         {buildLabel}
