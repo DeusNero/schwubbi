@@ -10,19 +10,35 @@ import {
 } from '../lib/supabase'
 import imageCompression from 'browser-image-compression'
 import { LeaderboardSketchIcon } from './icons/SketchIcons'
-import { getAllElos } from '../lib/storage'
+import { getAllElos, addUploadHistoryEntry } from '../lib/storage'
 
 interface HeroOption {
   src: string
   rank: number | null
 }
 
+interface UploadQueueItem {
+  file: File
+  batchId: string
+}
+
+interface UploadBatchMeta {
+  id: string
+  startedAt: string
+  selected: number
+  processed: number
+  uploaded: number
+  skipped: number
+  failed: number
+}
+
 export default function HomeScreen() {
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const uploadQueueRef = useRef<File[]>([])
+  const uploadQueueRef = useRef<UploadQueueItem[]>([])
   const processingQueueRef = useRef(false)
   const backfillCompletedRef = useRef(false)
+  const uploadBatchMetaRef = useRef<Record<string, UploadBatchMeta>>({})
   const defaultHeroSrc = `${import.meta.env.BASE_URL}schwubbi-hero.png`
   const [uploading, setUploading] = useState(false)
   const [queuedCount, setQueuedCount] = useState(0)
@@ -125,8 +141,10 @@ export default function HomeScreen() {
       }
 
       while (uploadQueueRef.current.length > 0) {
-        const file = uploadQueueRef.current.shift()
-        if (!file) break
+        const nextItem = uploadQueueRef.current.shift()
+        if (!nextItem) break
+        const { file, batchId } = nextItem
+        const batch = uploadBatchMetaRef.current[batchId]
         setQueuedCount(uploadQueueRef.current.length)
         processed++
         setUploadProgress(`Processing ${processed}... ${uploadQueueRef.current.length} queued`)
@@ -149,6 +167,9 @@ export default function HomeScreen() {
           const exists = await hasImageWithContentHash(contentHash)
           if (exists) {
             skipped++
+            if (batch) {
+              batch.skipped++
+            }
             setUploadProgress(`Skipped ${skipped} duplicate${skipped !== 1 ? 's' : ''} · ${uploadQueueRef.current.length} queued`)
             continue
           }
@@ -158,17 +179,42 @@ export default function HomeScreen() {
 
           if (result.status === 'duplicate') {
             skipped++
+            if (batch) {
+              batch.skipped++
+            }
             setUploadProgress(`Skipped ${skipped} duplicate${skipped !== 1 ? 's' : ''} · ${uploadQueueRef.current.length} queued`)
             continue
           }
 
           uploaded++
+          if (batch) {
+            batch.uploaded++
+          }
           setUploadProgress(`Uploaded ${uploaded} · Skipped ${skipped} · ${uploadQueueRef.current.length} queued`)
         } catch (err) {
           failed++
+          if (batch) {
+            batch.failed++
+          }
           console.error('Upload failed for', file.name, err)
           setUploadProgress(`Failed ${failed} · ${uploadQueueRef.current.length} queued`)
           await new Promise((r) => setTimeout(r, 900))
+        } finally {
+          if (batch) {
+            batch.processed++
+            if (batch.processed >= batch.selected) {
+              await addUploadHistoryEntry({
+                id: batch.id,
+                startedAt: batch.startedAt,
+                finishedAt: new Date().toISOString(),
+                selected: batch.selected,
+                uploaded: batch.uploaded,
+                skipped: batch.skipped,
+                failed: batch.failed,
+              })
+              delete uploadBatchMetaRef.current[batch.id]
+            }
+          }
         }
       }
 
@@ -203,7 +249,17 @@ export default function HomeScreen() {
   const handleUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
-    uploadQueueRef.current.push(...Array.from(files))
+    const batchId = crypto.randomUUID()
+    uploadBatchMetaRef.current[batchId] = {
+      id: batchId,
+      startedAt: new Date().toISOString(),
+      selected: files.length,
+      processed: 0,
+      uploaded: 0,
+      skipped: 0,
+      failed: 0,
+    }
+    uploadQueueRef.current.push(...Array.from(files).map((file) => ({ file, batchId })))
     setQueuedCount(uploadQueueRef.current.length)
     if (fileInputRef.current) fileInputRef.current.value = ''
 

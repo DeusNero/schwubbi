@@ -6,7 +6,9 @@ import {
   importAllElos,
   getBackupCode,
   setBackupCode,
+  getUploadHistory,
 } from '../lib/storage'
+import type { UploadHistoryEntry } from '../lib/storage'
 import { supabase } from '../lib/supabase'
 import { BackupSketchIcon } from './icons/SketchIcons'
 
@@ -20,13 +22,21 @@ function generateCode(): string {
 export default function BackupRestore() {
   const navigate = useNavigate()
   const [existingCode, setExistingCode] = useState<string | null>(null)
+  const [uploadHistory, setUploadHistory] = useState<UploadHistoryEntry[]>([])
   const [restoreInput, setRestoreInput] = useState('')
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     getBackupCode().then(setExistingCode)
+    getUploadHistory().then(setUploadHistory)
   }, [])
+
+  const formatHistoryDate = (value: string) => {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return value
+    return date.toLocaleString()
+  }
 
   const handleBackup = async () => {
     setBusy(true)
@@ -169,6 +179,46 @@ export default function BackupRestore() {
         >
           Restore
         </button>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="paper-card"
+        style={{ maxWidth: 360, width: '100%' }}
+      >
+        <h3 style={{ fontSize: 16, marginBottom: 8 }}>Upload History</h3>
+        <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 12 }}>
+          Log of past upload batches with totals, new uploads, skipped duplicates, and date/time.
+        </p>
+
+        {uploadHistory.length === 0 ? (
+          <div className="paper-note" style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center' }}>
+            No upload history yet.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
+            {uploadHistory.map((entry) => (
+              <div
+                key={entry.id}
+                className="paper-note"
+                style={{ fontSize: 12, display: 'grid', gridTemplateColumns: '1fr auto', gap: 6 }}
+              >
+                <div style={{ fontWeight: 700 }}>{formatHistoryDate(entry.startedAt)}</div>
+                <div style={{ color: 'var(--text-dim)' }}>
+                  {entry.selected} selected
+                </div>
+                <div style={{ color: 'var(--text-dim)' }}>
+                  New: {entry.uploaded} · Skipped: {entry.skipped} · Failed: {entry.failed}
+                </div>
+                <div style={{ color: 'var(--text-dim)' }}>
+                  {formatHistoryDate(entry.finishedAt)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </motion.div>
 
       {status && (

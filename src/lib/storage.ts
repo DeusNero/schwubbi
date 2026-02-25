@@ -8,8 +8,20 @@ export interface EloEntry {
   matchups: number
 }
 
+export interface UploadHistoryEntry {
+  id: string
+  startedAt: string
+  finishedAt: string
+  selected: number
+  uploaded: number
+  skipped: number
+  failed: number
+}
+
 const ELO_PREFIX = 'elo_'
 const BACKUP_META_KEY = 'backup_code'
+const UPLOAD_HISTORY_KEY = 'upload_history'
+const MAX_UPLOAD_HISTORY = 500
 
 export async function requestPersistentStorage(): Promise<boolean> {
   if (navigator.storage?.persist) {
@@ -69,4 +81,14 @@ export async function getBackupCode(): Promise<string | null> {
 
 export async function setBackupCode(code: string): Promise<void> {
   await set(BACKUP_META_KEY, code)
+}
+
+export async function getUploadHistory(): Promise<UploadHistoryEntry[]> {
+  return (await get<UploadHistoryEntry[]>(UPLOAD_HISTORY_KEY)) ?? []
+}
+
+export async function addUploadHistoryEntry(entry: UploadHistoryEntry): Promise<void> {
+  const current = await getUploadHistory()
+  const next = [entry, ...current].slice(0, MAX_UPLOAD_HISTORY)
+  await set(UPLOAD_HISTORY_KEY, next)
 }
