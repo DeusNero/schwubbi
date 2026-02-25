@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Easing } from 'framer-motion'
 import type { Matchup } from '../engine/tournament'
 import { getThumbUrl } from '../lib/supabase'
 import { playLaunch, playTap, playElimination, playCountdownReminder, playSurprisedMeow } from '../lib/sounds'
+import { TrailCatSketchIcon, TrailHappyCatSketchIcon, TrailHeartSketchIcon } from './icons/SketchIcons'
 
 interface BattleProps {
   matchup: Matchup
@@ -16,6 +17,38 @@ interface BattleProps {
 const ANIMATION_DURATION = 5
 const TIMEOUT_EXTRA = 3
 const TOTAL_TIME = ANIMATION_DURATION + TIMEOUT_EXTRA
+const TRAIL_ACCENT = 'rgba(223, 122, 55, 0.62)'
+const TRAIL_LINE = 'rgba(28, 16, 8, 1)'
+
+type TrailKind = 'cat' | 'happy' | 'heart'
+
+interface TrailParticle {
+  id: string
+  kind: TrailKind
+  x: number
+  y: number
+  drift: number
+  spin: number
+  delay: number
+  size: number
+}
+
+function makeTrailParticles(seed: string): TrailParticle[] {
+  return Array.from({ length: 14 }).map((_, i) => {
+    const n = seed.charCodeAt(i % seed.length) + i * 17
+    const kind: TrailKind = i % 5 === 4 ? 'heart' : i % 2 === 0 ? 'cat' : 'happy'
+    return {
+      id: `${seed}-${i}`,
+      kind,
+      x: 16 + (n % 66),
+      y: 18 + (i % 5) * 12,
+      drift: ((n % 18) - 9) * 1.5,
+      spin: i % 2 === 0 ? 28 : -24,
+      delay: i * 0.09,
+      size: kind === 'heart' ? 24 + (n % 5) : 26 + (n % 6),
+    }
+  })
+}
 
 export default function Battle({ matchup, onResult, roundLabel, round, totalRounds }: BattleProps) {
   const [phase, setPhase] = useState<'animate' | 'timeout' | 'timeout-fall' | 'chosen'>('animate')
@@ -133,9 +166,27 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
     ease: animationEase,
   }
 
-  const frozenLeft = { x: -spreadX, y: 0, rotate: -3 }
-  const frozenRight = { x: spreadX, y: 0, rotate: 3 }
   const yarnWidth = Math.max(0, (timeLeft / TOTAL_TIME) * 100)
+  const leftTrailParticles = useMemo(() => makeTrailParticles(matchup.left.id), [matchup.left.id])
+  const rightTrailParticles = useMemo(() => makeTrailParticles(matchup.right.id), [matchup.right.id])
+  const burstParticles = useMemo(
+    () =>
+      Array.from({ length: 9 }).map((_, i): { id: string; kind: TrailKind; angle: number; size: number } => ({
+        id: `burst-${i}`,
+        kind: i % 3 === 0 ? 'heart' : i % 2 === 0 ? 'happy' : 'cat',
+        angle: (i / 9) * Math.PI * 2,
+        size: i % 3 === 0 ? 34 : 30,
+      })),
+    []
+  )
+  const trailDuration = phase === 'timeout' ? 0.5 : 0.95
+
+  const renderTrailIcon = (kind: TrailKind, size: number) => {
+    const iconStyle: React.CSSProperties = { width: size, height: size, strokeWidth: 2.3 }
+    if (kind === 'heart') return <TrailHeartSketchIcon size={size} style={iconStyle} />
+    if (kind === 'happy') return <TrailHappyCatSketchIcon size={size} style={iconStyle} />
+    return <TrailCatSketchIcon size={size} style={iconStyle} />
+  }
 
   return (
     <motion.div
@@ -223,13 +274,13 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
           gap: 18,
         }}
       >
-        <motion.button
+        <motion.div
           key={`left-${matchup.left.id}`}
           className="polaroid-card"
-          style={{ width: cardWidth, transform: 'rotate(-2.8deg)', cursor: 'pointer', ...getChosenStyle(matchup.left.id) }}
+          style={{ width: cardWidth, transform: 'rotate(-2.8deg)', cursor: 'pointer', overflow: 'visible', ...getChosenStyle(matchup.left.id) }}
           animate={
             phase === 'timeout'
-              ? frozenLeft
+              ? { x: -spreadX, y: 0, rotate: [-8, 2, -7, 3, -8] }
               : phase === 'timeout-fall'
                 ? { x: -spreadX * 0.4, y: vh * 0.72, rotate: -18, opacity: 0.15 }
               : phase === 'chosen'
@@ -241,28 +292,109 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
           transition={
             phase === 'animate'
               ? animationTransition
+              : phase === 'timeout'
+                ? { duration: 0.55, ease: 'easeInOut', repeat: Infinity }
               : phase === 'timeout-fall'
                 ? { duration: 0.6, ease: 'easeOut' }
                 : { duration: 0.4, ease: 'easeOut' }
           }
           onClick={() => handleChoice(matchup.left.id)}
-          draggable={false}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') handleChoice(matchup.left.id)
+          }}
         >
+          {(phase !== 'timeout-fall' && phase !== 'chosen') && leftTrailParticles.map((p) => (
+            <motion.div
+              key={p.id}
+              style={{
+                position: 'absolute',
+                left: `${p.x}%`,
+                bottom: p.y,
+                color: TRAIL_LINE,
+                zIndex: 40,
+                pointerEvents: 'none',
+                filter: 'drop-shadow(0 1px 0 rgba(255, 236, 207, 0.45))',
+              }}
+              animate={{
+                x: [0, p.drift],
+                y: [0, -86 - (p.size * 1.35)],
+                rotate: [0, p.spin],
+                opacity: [0.95, 0.7, 0],
+                scale: [0.78, 1.02, 1.12],
+              }}
+              transition={{
+                duration: trailDuration,
+                delay: p.delay,
+                repeat: Infinity,
+                ease: 'easeOut',
+                repeatDelay: phase === 'timeout' ? 0 : 0.02,
+              }}
+            >
+              <div style={{ position: 'absolute', inset: -6, borderRadius: 999, background: TRAIL_ACCENT, opacity: 0.48 }} />
+              {renderTrailIcon(p.kind, p.size)}
+            </motion.div>
+          ))}
+          {phase === 'timeout' && (
+            <motion.div
+              style={{ position: 'absolute', inset: -18, zIndex: 45, pointerEvents: 'none' }}
+              animate={{ rotate: 360 }}
+              transition={{ duration: 0.72, ease: 'linear', repeat: Infinity }}
+            >
+              {burstParticles.map((p) => (
+                <div
+                  key={`left-swirl-${p.id}`}
+                  style={{
+                    position: 'absolute',
+                    left: `calc(50% + ${Math.cos(p.angle) * 66}px)`,
+                    top: `calc(45% + ${Math.sin(p.angle) * 66}px)`,
+                    color: TRAIL_LINE,
+                    opacity: 0.82,
+                  }}
+                >
+                  {renderTrailIcon(p.kind, 22)}
+                </div>
+              ))}
+            </motion.div>
+          )}
+          {phase === 'chosen' && chosenId === matchup.left.id && (
+            <div style={{ position: 'absolute', inset: -34, zIndex: 50, pointerEvents: 'none' }}>
+              {burstParticles.map((p, idx) => (
+                <motion.div
+                  key={`left-burst-${p.id}`}
+                  initial={{ x: 0, y: 0, opacity: 0, scale: 0.6, rotate: 0 }}
+                  animate={{
+                    x: Math.cos(p.angle) * (82 + (idx % 3) * 28),
+                    y: Math.sin(p.angle) * (82 + (idx % 3) * 28),
+                    opacity: [0, 1, 0],
+                    scale: [0.68, 1.16, 0.82],
+                    rotate: idx % 2 === 0 ? 28 : -28,
+                  }}
+                  transition={{ duration: 0.7, ease: 'easeOut', delay: idx * 0.02 }}
+                  style={{ position: 'absolute', left: '50%', top: '50%', marginLeft: -8, marginTop: -8, color: TRAIL_LINE }}
+                >
+                  {renderTrailIcon(p.kind, p.size)}
+                </motion.div>
+              ))}
+            </div>
+          )}
           <img
             src={leftUrl}
             alt="Left cat"
             className="polaroid-photo"
+            style={{ position: 'relative', zIndex: 2 }}
             draggable={false}
           />
-        </motion.button>
+        </motion.div>
 
-        <motion.button
+        <motion.div
           key={`right-${matchup.right.id}`}
           className="polaroid-card"
-          style={{ width: cardWidth, transform: 'rotate(2.2deg)', cursor: 'pointer', ...getChosenStyle(matchup.right.id) }}
+          style={{ width: cardWidth, transform: 'rotate(2.2deg)', cursor: 'pointer', overflow: 'visible', ...getChosenStyle(matchup.right.id) }}
           animate={
             phase === 'timeout'
-              ? frozenRight
+              ? { x: spreadX, y: 0, rotate: [8, -2, 7, -3, 8] }
               : phase === 'timeout-fall'
                 ? { x: spreadX * 0.4, y: vh * 0.74, rotate: 20, opacity: 0.15 }
               : phase === 'chosen'
@@ -274,20 +406,101 @@ export default function Battle({ matchup, onResult, roundLabel, round, totalRoun
           transition={
             phase === 'animate'
               ? animationTransition
+              : phase === 'timeout'
+                ? { duration: 0.55, ease: 'easeInOut', repeat: Infinity }
               : phase === 'timeout-fall'
                 ? { duration: 0.6, ease: 'easeOut' }
                 : { duration: 0.4, ease: 'easeOut' }
           }
           onClick={() => handleChoice(matchup.right.id)}
-          draggable={false}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') handleChoice(matchup.right.id)
+          }}
         >
+          {(phase !== 'timeout-fall' && phase !== 'chosen') && rightTrailParticles.map((p) => (
+            <motion.div
+              key={p.id}
+              style={{
+                position: 'absolute',
+                left: `${p.x}%`,
+                bottom: p.y,
+                color: TRAIL_LINE,
+                zIndex: 40,
+                pointerEvents: 'none',
+                filter: 'drop-shadow(0 1px 0 rgba(255, 236, 207, 0.45))',
+              }}
+              animate={{
+                x: [0, p.drift],
+                y: [0, -86 - (p.size * 1.35)],
+                rotate: [0, p.spin],
+                opacity: [0.95, 0.7, 0],
+                scale: [0.78, 1.02, 1.12],
+              }}
+              transition={{
+                duration: trailDuration,
+                delay: p.delay,
+                repeat: Infinity,
+                ease: 'easeOut',
+                repeatDelay: phase === 'timeout' ? 0 : 0.02,
+              }}
+            >
+              <div style={{ position: 'absolute', inset: -6, borderRadius: 999, background: TRAIL_ACCENT, opacity: 0.48 }} />
+              {renderTrailIcon(p.kind, p.size)}
+            </motion.div>
+          ))}
+          {phase === 'timeout' && (
+            <motion.div
+              style={{ position: 'absolute', inset: -18, zIndex: 45, pointerEvents: 'none' }}
+              animate={{ rotate: -360 }}
+              transition={{ duration: 0.68, ease: 'linear', repeat: Infinity }}
+            >
+              {burstParticles.map((p) => (
+                <div
+                  key={`right-swirl-${p.id}`}
+                  style={{
+                    position: 'absolute',
+                    left: `calc(50% + ${Math.cos(p.angle) * 66}px)`,
+                    top: `calc(45% + ${Math.sin(p.angle) * 66}px)`,
+                    color: TRAIL_LINE,
+                    opacity: 0.82,
+                  }}
+                >
+                  {renderTrailIcon(p.kind, 22)}
+                </div>
+              ))}
+            </motion.div>
+          )}
+          {phase === 'chosen' && chosenId === matchup.right.id && (
+            <div style={{ position: 'absolute', inset: -34, zIndex: 50, pointerEvents: 'none' }}>
+              {burstParticles.map((p, idx) => (
+                <motion.div
+                  key={`right-burst-${p.id}`}
+                  initial={{ x: 0, y: 0, opacity: 0, scale: 0.6, rotate: 0 }}
+                  animate={{
+                    x: Math.cos(p.angle) * (82 + (idx % 3) * 28),
+                    y: Math.sin(p.angle) * (82 + (idx % 3) * 28),
+                    opacity: [0, 1, 0],
+                    scale: [0.68, 1.16, 0.82],
+                    rotate: idx % 2 === 0 ? 28 : -28,
+                  }}
+                  transition={{ duration: 0.7, ease: 'easeOut', delay: idx * 0.02 }}
+                  style={{ position: 'absolute', left: '50%', top: '50%', marginLeft: -8, marginTop: -8, color: TRAIL_LINE }}
+                >
+                  {renderTrailIcon(p.kind, p.size)}
+                </motion.div>
+              ))}
+            </div>
+          )}
           <img
             src={rightUrl}
             alt="Right cat"
             className="polaroid-photo"
+            style={{ position: 'relative', zIndex: 2 }}
             draggable={false}
           />
-        </motion.button>
+        </motion.div>
       </div>
     </motion.div>
   )

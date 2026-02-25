@@ -211,7 +211,7 @@ export default function HomeScreen() {
       </motion.div>
 
       <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center', fontSize: 11, color: 'rgba(64,40,24,0.33)' }}>
-        v1.1.0
+        v1.2.0
       </div>
     </div>
   )

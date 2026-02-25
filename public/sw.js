@@ -1,4 +1,4 @@
-const CACHE_NAME = 'schwubbi-v10';
+const CACHE_NAME = 'schwubbi-v11';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE_NAME));
