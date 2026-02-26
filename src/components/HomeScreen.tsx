@@ -61,6 +61,7 @@ export default function HomeScreen() {
   const [heroIdx, setHeroIdx] = useState(0)
   const [namePromptOpen, setNamePromptOpen] = useState(false)
   const [nameInput, setNameInput] = useState('')
+  const [nameError, setNameError] = useState('')
   const [ownProfile, setOwnProfile] = useState<PlayerProfile | null>(null)
   const [otherPlayers, setOtherPlayers] = useState<{ profile: PlayerProfile; favorites: CommunityFavorite[] }[]>([])
   const [otherPlayerIdx, setOtherPlayerIdx] = useState<Record<string, number>>({})
@@ -242,11 +243,14 @@ export default function HomeScreen() {
   const handleNameSubmit = useCallback(async () => {
     const name = nameInput.trim()
     if (!name) return
+    setNameError('')
     const funTitle = generateFunTitle()
     const profile = await upsertProfile(name, funTitle)
     if (profile) {
       setOwnProfile(profile)
       setNamePromptOpen(false)
+    } else {
+      setNameError('Could not save — please try again in a moment.')
     }
   }, [nameInput])
 
@@ -713,6 +717,10 @@ export default function HomeScreen() {
             </p>
             <input
               type="text"
+              name="schwubbi_display_name"
+              autoComplete="off"
+              autoCorrect="off"
+              data-form-type="other"
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void handleNameSubmit() }}
@@ -722,6 +730,11 @@ export default function HomeScreen() {
               autoFocus
               maxLength={24}
             />
+            {nameError && (
+              <div style={{ fontSize: 12, color: '#a44a30', marginBottom: 8 }}>
+                {nameError}
+              </div>
+            )}
             <button
               className="btn btn-primary btn-note"
               onClick={() => void handleNameSubmit()}
