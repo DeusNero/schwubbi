@@ -253,6 +253,120 @@ export async function upsertCloudLeaderboard(entries: CloudEloEntry[]): Promise<
   if (error) throw error
 }
 
+// --- Profiles ---
+
+export interface PlayerProfile {
+  userId: string
+  displayName: string
+  funTitle: string
+}
+
+const FUN_TITLE_ADJECTIVES = [
+  'Fluffy', 'Sneaky', 'Cozy', 'Fuzzy', 'Mighty', 'Sleepy', 'Cheeky',
+  'Jolly', 'Purrfect', 'Bouncy', 'Sassy', 'Cuddly', 'Daring', 'Gentle',
+  'Swift', 'Dreamy', 'Lucky', 'Spicy', 'Sparkly', 'Toasty',
+]
+
+const FUN_TITLE_NOUNS = [
+  'Whisker', 'Yarn Master', 'Paw Captain', 'Purr Lord', 'Kitten Knight',
+  'Meow Scout', 'Catnip Baron', 'Toe Bean', 'Fur Wizard', 'Tail Chaser',
+  'Nap King', 'Scratch Hero', 'Milk Thief', 'Box Explorer', 'Floof General',
+  'Chirp Champ', 'Biscuit Maker', 'Laser Hunter', 'Snuggle Boss', 'Zoomie Star',
+]
+
+export function generateFunTitle(): string {
+  const adj = FUN_TITLE_ADJECTIVES[Math.floor(Math.random() * FUN_TITLE_ADJECTIVES.length)]
+  const noun = FUN_TITLE_NOUNS[Math.floor(Math.random() * FUN_TITLE_NOUNS.length)]
+  return `${adj} ${noun}`
+}
+
+export async function fetchOwnProfile(): Promise<PlayerProfile | null> {
+  if (!hasSupabaseConfig) return null
+  const userId = await ensureAnonymousSession()
+  if (!userId) return null
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('user_id, display_name, fun_title')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) { console.warn('fetchOwnProfile error', error); return null }
+  if (!data) return null
+
+  return { userId: data.user_id, displayName: data.display_name, funTitle: data.fun_title }
+}
+
+export async function upsertProfile(displayName: string, funTitle: string): Promise<PlayerProfile | null> {
+  if (!hasSupabaseConfig) return null
+  const userId = await ensureAnonymousSession()
+  if (!userId) return null
+
+  const { error } = await supabase
+    .from('profiles')
+    .upsert({
+      user_id: userId,
+      display_name: displayName,
+      fun_title: funTitle,
+    }, { onConflict: 'user_id' })
+
+  if (error) { console.warn('upsertProfile error', error); return null }
+  return { userId, displayName, funTitle }
+}
+
+export async function fetchAllProfiles(): Promise<PlayerProfile[]> {
+  if (!hasSupabaseConfig) return []
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('user_id, display_name, fun_title')
+
+  if (error) { console.warn('fetchAllProfiles error', error); return [] }
+  return (data ?? []).map((row) => ({
+    userId: row.user_id,
+    displayName: row.display_name,
+    funTitle: row.fun_title,
+  }))
+}
+
+// --- Community Favorites ---
+
+export interface CommunityFavorite {
+  userId: string
+  imageId: string
+  elo: number
+  rank: number
+}
+
+export async function fetchCommunityFavorites(): Promise<CommunityFavorite[]> {
+  if (!hasSupabaseConfig) return []
+
+  const { data, error } = await supabase
+    .from('leaderboards')
+    .select('user_id, image_id, elo')
+    .gt('matchups', 0)
+    .order('elo', { ascending: false })
+
+  if (error) { console.warn('fetchCommunityFavorites error', error); return [] }
+  if (!data) return []
+
+  const byUser = new Map<string, CommunityFavorite[]>()
+  for (const row of data) {
+    const list = byUser.get(row.user_id) ?? []
+    if (list.length < 3) {
+      list.push({
+        userId: row.user_id,
+        imageId: row.image_id,
+        elo: row.elo,
+        rank: list.length + 1,
+      })
+      byUser.set(row.user_id, list)
+    }
+  }
+
+  return Array.from(byUser.values()).flat()
+}
+
 export async function clearCloudLeaderboard(): Promise<void> {
   if (!hasSupabaseConfig) return
   const userId = await ensureAnonymousSession()

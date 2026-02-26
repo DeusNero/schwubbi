@@ -1,7 +1,17 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getThumbUrl } from '../lib/supabase'
+import {
+  getThumbUrl,
+  getFullUrl,
+  fetchOwnProfile,
+  upsertProfile,
+  generateFunTitle,
+  fetchAllProfiles,
+  fetchCommunityFavorites,
+  ensureAnonymousSession,
+} from '../lib/supabase'
+import type { PlayerProfile, CommunityFavorite } from '../lib/supabase'
 import { LeaderboardSketchIcon } from './icons/SketchIcons'
 import { getAllElos } from '../lib/storage'
 import { useUploadManager } from '../upload/useUploadManager'
@@ -49,6 +59,12 @@ export default function HomeScreen() {
   const [uploadUnlocked, setUploadUnlocked] = useState(false)
   const [heroOptions, setHeroOptions] = useState<HeroOption[]>([{ src: defaultHeroSrc, rank: null }])
   const [heroIdx, setHeroIdx] = useState(0)
+  const [namePromptOpen, setNamePromptOpen] = useState(false)
+  const [nameInput, setNameInput] = useState('')
+  const [ownProfile, setOwnProfile] = useState<PlayerProfile | null>(null)
+  const [otherPlayers, setOtherPlayers] = useState<{ profile: PlayerProfile; favorites: CommunityFavorite[] }[]>([])
+  const [otherPlayerIdx, setOtherPlayerIdx] = useState<Record<string, number>>({})
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null)
   const uploadPasswordRequired = import.meta.env.VITE_UPLOAD_PASSWORD ?? '123456789'
   const buildDate = new Date(import.meta.env.VITE_BUILD_TIME ?? '')
   const buildLabel = Number.isNaN(buildDate.getTime())
@@ -116,6 +132,53 @@ export default function HomeScreen() {
     }
   }, [defaultHeroSrc])
 
+  useEffect(() => {
+    let mounted = true
+
+    const loadProfile = async () => {
+      const profile = await fetchOwnProfile()
+      if (!mounted) return
+      if (profile) {
+        setOwnProfile(profile)
+      } else {
+        const uid = await ensureAnonymousSession()
+        if (uid && mounted) setNamePromptOpen(true)
+      }
+    }
+
+    void loadProfile()
+    return () => { mounted = false }
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadCommunity = async () => {
+      const [profiles, favorites] = await Promise.all([
+        fetchAllProfiles(),
+        fetchCommunityFavorites(),
+      ])
+      if (!mounted) return
+
+      const userId = ownProfile?.userId ?? (await ensureAnonymousSession())
+
+      const grouped = profiles
+        .filter((p) => p.userId !== userId)
+        .map((profile) => ({
+          profile,
+          favorites: favorites
+            .filter((f) => f.userId === profile.userId)
+            .sort((a, b) => a.rank - b.rank),
+        }))
+        .filter((entry) => entry.favorites.length > 0)
+
+      setOtherPlayers(grouped)
+    }
+
+    void loadCommunity()
+    return () => { mounted = false }
+  }, [ownProfile])
+
   const showPreviousHero = useCallback(() => {
     if (heroOptions.length <= 1) return
     setHeroIdx((i) => (i - 1 + heroOptions.length) % heroOptions.length)
@@ -176,8 +239,27 @@ export default function HomeScreen() {
     setUploadPasswordError('Wrong password')
   }, [uploadPasswordInput, uploadPasswordRequired])
 
+  const handleNameSubmit = useCallback(async () => {
+    const name = nameInput.trim()
+    if (!name) return
+    const funTitle = generateFunTitle()
+    const profile = await upsertProfile(name, funTitle)
+    if (profile) {
+      setOwnProfile(profile)
+      setNamePromptOpen(false)
+    }
+  }, [nameInput])
+
+  const showOtherPlayerPrev = useCallback((userId: string, total: number) => {
+    setOtherPlayerIdx((prev) => ({ ...prev, [userId]: ((prev[userId] ?? 0) - 1 + total) % total }))
+  }, [])
+
+  const showOtherPlayerNext = useCallback((userId: string, total: number) => {
+    setOtherPlayerIdx((prev) => ({ ...prev, [userId]: ((prev[userId] ?? 0) + 1) % total }))
+  }, [])
+
   return (
-    <div className="screen" style={{ gap: 28 }}>
+    <div className="screen" style={{ gap: 28, overflowY: 'auto', paddingBottom: 140 }}>
       <motion.button
         initial={{ y: -14, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -351,6 +433,117 @@ export default function HomeScreen() {
         </button>
       </motion.div>
 
+      {otherPlayers.length > 0 && (
+        <motion.div
+          initial={{ y: 30, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.25 }}
+          style={{ width: '100%', maxWidth: 320 }}
+        >
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10, color: 'var(--text-dim)' }}>
+            Other Players
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {otherPlayers.map(({ profile, favorites }) => {
+              const idx = otherPlayerIdx[profile.userId] ?? 0
+              const activeFav = favorites[idx] ?? favorites[0]
+              const avatarSrc = favorites.length > 0 ? getThumbUrl(favorites[0].imageId) : `${import.meta.env.BASE_URL}schwubbi-hero.png`
+              return (
+                <div
+                  key={profile.userId}
+                  className="paper-card"
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px' }}
+                >
+                  <img
+                    src={avatarSrc}
+                    alt={profile.displayName}
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '2px solid rgba(98, 62, 32, 0.25)',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {profile.displayName}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                      {profile.funTitle}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => showOtherPlayerPrev(profile.userId, favorites.length)}
+                      disabled={favorites.length <= 1}
+                      style={{
+                        width: 22, height: 22, borderRadius: '50%',
+                        border: '1px solid rgba(113, 72, 39, 0.25)',
+                        background: 'rgba(255, 248, 236, 0.6)',
+                        color: 'var(--text-dim)', fontSize: 12,
+                        cursor: favorites.length <= 1 ? 'default' : 'pointer',
+                        opacity: favorites.length <= 1 ? 0.3 : 0.75,
+                      }}
+                    >
+                      ‹
+                    </button>
+                    <motion.img
+                      key={`${profile.userId}-${activeFav?.imageId}`}
+                      src={activeFav ? getThumbUrl(activeFav.imageId) : avatarSrc}
+                      alt={`#${activeFav?.rank ?? 1}`}
+                      onClick={() => activeFav && setFullscreenImage(getFullUrl(activeFav.imageId))}
+                      drag={favorites.length > 1 ? 'x' : false}
+                      dragConstraints={{ left: 0, right: 0 }}
+                      dragElastic={0.2}
+                      onDragEnd={(_, info) => {
+                        if (info.offset.x > 28) showOtherPlayerPrev(profile.userId, favorites.length)
+                        if (info.offset.x < -28) showOtherPlayerNext(profile.userId, favorites.length)
+                      }}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      style={{
+                        width: 52, height: 52, borderRadius: 6,
+                        objectFit: 'cover', cursor: 'pointer',
+                        border: '2px solid rgba(98, 62, 32, 0.22)',
+                      }}
+                    />
+                    <div style={{ position: 'relative' }}>
+                      <span style={{
+                        position: 'absolute', top: -8, right: -6,
+                        fontSize: 9, fontWeight: 700,
+                        color: activeFav?.rank === 1 ? 'var(--gold)' : activeFav?.rank === 2 ? 'var(--silver)' : 'var(--bronze)',
+                        background: 'rgba(255,248,236,0.9)', borderRadius: 6, padding: '1px 4px',
+                        border: '1px solid rgba(113,72,39,0.18)',
+                      }}>
+                        #{activeFav?.rank ?? 1}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => showOtherPlayerNext(profile.userId, favorites.length)}
+                      disabled={favorites.length <= 1}
+                      style={{
+                        width: 22, height: 22, borderRadius: '50%',
+                        border: '1px solid rgba(113, 72, 39, 0.25)',
+                        background: 'rgba(255, 248, 236, 0.6)',
+                        color: 'var(--text-dim)', fontSize: 12,
+                        cursor: favorites.length <= 1 ? 'default' : 'pointer',
+                        opacity: favorites.length <= 1 ? 0.3 : 0.75,
+                      }}
+                    >
+                      ›
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </motion.div>
+      )}
+
       <input
         ref={fileInputRef}
         type="file"
@@ -502,6 +695,66 @@ export default function HomeScreen() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {namePromptOpen && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 130,
+            background: 'rgba(0,0,0,0.48)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18,
+          }}
+        >
+          <div className="paper-card" style={{ width: '100%', maxWidth: 330, textAlign: 'center' }}>
+            <h3 style={{ fontSize: 18, marginBottom: 6 }}>Welcome to Schwubbi!</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 14 }}>
+              What should we call you?
+            </p>
+            <input
+              type="text"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void handleNameSubmit() }}
+              className="paper-input"
+              placeholder="Your name"
+              style={{ marginBottom: 12, textAlign: 'center' }}
+              autoFocus
+              maxLength={24}
+            />
+            <button
+              className="btn btn-primary btn-note"
+              onClick={() => void handleNameSubmit()}
+              disabled={!nameInput.trim()}
+              style={{ width: '100%' }}
+            >
+              Let's go!
+            </button>
+          </div>
+        </div>
+      )}
+
+      {fullscreenImage && (
+        <div
+          onClick={() => setFullscreenImage(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 140,
+            background: 'rgba(0,0,0,0.82)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', padding: 16,
+          }}
+        >
+          <motion.img
+            src={fullscreenImage}
+            alt="Full size"
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            style={{
+              maxWidth: '92vw', maxHeight: '88vh',
+              borderRadius: 10, objectFit: 'contain',
+              boxShadow: '0 12px 48px rgba(0,0,0,0.5)',
+            }}
+          />
         </div>
       )}
 

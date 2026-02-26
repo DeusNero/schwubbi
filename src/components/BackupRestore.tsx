@@ -9,7 +9,8 @@ import {
   getUploadHistory,
 } from '../lib/storage'
 import type { UploadHistoryEntry } from '../lib/storage'
-import { supabase } from '../lib/supabase'
+import { supabase, fetchOwnProfile, upsertProfile } from '../lib/supabase'
+import type { PlayerProfile } from '../lib/supabase'
 import { BackupSketchIcon } from './icons/SketchIcons'
 
 function generateCode(): string {
@@ -26,10 +27,17 @@ export default function BackupRestore() {
   const [restoreInput, setRestoreInput] = useState('')
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
+  const [profile, setProfile] = useState<PlayerProfile | null>(null)
+  const [editingName, setEditingName] = useState(false)
+  const [nameInput, setNameInput] = useState('')
+  const [nameSaveStatus, setNameSaveStatus] = useState('')
 
   useEffect(() => {
     getBackupCode().then(setExistingCode)
     getUploadHistory().then(setUploadHistory)
+    fetchOwnProfile().then((p) => {
+      if (p) { setProfile(p); setNameInput(p.displayName) }
+    })
   }, [])
 
   const formatHistoryDate = (value: string) => {
@@ -121,6 +129,74 @@ export default function BackupRestore() {
           Backup & Restore
         </h2>
       </div>
+
+      {profile && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="paper-card"
+          style={{ maxWidth: 360, width: '100%' }}
+        >
+          <h3 style={{ fontSize: 16, marginBottom: 8 }}>Your Profile</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <div style={{ flex: 1 }}>
+              {editingName ? (
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const trimmed = nameInput.trim()
+                      if (!trimmed || !profile) return
+                      setEditingName(false)
+                      void upsertProfile(trimmed, profile.funTitle).then((p) => {
+                        if (p) { setProfile(p); setNameSaveStatus('Name updated!') }
+                        else setNameSaveStatus('Failed to save')
+                        setTimeout(() => setNameSaveStatus(''), 2500)
+                      })
+                    }
+                  }}
+                  className="paper-input"
+                  style={{ fontSize: 14, padding: '6px 10px' }}
+                  maxLength={24}
+                  autoFocus
+                />
+              ) : (
+                <div>
+                  <span style={{ fontSize: 15, fontWeight: 700 }}>{profile.displayName}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)', fontStyle: 'italic', marginLeft: 8 }}>
+                    {profile.funTitle}
+                  </span>
+                </div>
+              )}
+            </div>
+            <button
+              className="btn btn-secondary btn-note"
+              style={{ fontSize: 12, padding: '5px 12px' }}
+              onClick={() => {
+                if (editingName) {
+                  const trimmed = nameInput.trim()
+                  if (!trimmed || !profile) { setEditingName(false); return }
+                  void upsertProfile(trimmed, profile.funTitle).then((p) => {
+                    if (p) { setProfile(p); setNameSaveStatus('Name updated!') }
+                    else setNameSaveStatus('Failed to save')
+                    setTimeout(() => setNameSaveStatus(''), 2500)
+                  })
+                }
+                setEditingName(!editingName)
+              }}
+            >
+              {editingName ? 'Save' : 'Edit name'}
+            </button>
+          </div>
+          {nameSaveStatus && (
+            <div style={{ fontSize: 12, color: nameSaveStatus.includes('Failed') ? '#a44a30' : 'var(--gold)' }}>
+              {nameSaveStatus}
+            </div>
+          )}
+        </motion.div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

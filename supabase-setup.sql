@@ -78,7 +78,31 @@ CREATE POLICY "Users can update own leaderboard" ON public.leaderboards FOR UPDA
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
--- 6. Duplicate prevention for uploads (safe migration)
+-- 6. Player profiles (display name + fun title, no login required)
+CREATE TABLE IF NOT EXISTS public.profiles (
+  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  display_name text NOT NULL,
+  fun_title text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read profiles" ON public.profiles FOR SELECT
+  USING (true);
+
+CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 7. Allow reading other users' leaderboard entries (community favorites)
+CREATE POLICY "Anyone can read all leaderboards" ON public.leaderboards FOR SELECT
+  USING (true);
+
+-- 8. Duplicate prevention for uploads (safe migration)
 -- Run on existing projects as well; IF NOT EXISTS keeps it idempotent.
 ALTER TABLE public.images
   ADD COLUMN IF NOT EXISTS content_hash text;
